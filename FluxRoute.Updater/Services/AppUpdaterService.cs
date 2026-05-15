@@ -195,6 +195,9 @@ public sealed class AppUpdaterService : IAppUpdaterService
             var newExeName = Path.GetFileName(exePath);
             var newExePath = Path.Combine(exeDir, newExeName);
 
+            // Папка внутри архива, где лежит FluxRoute.exe — копируем ВСЁ из неё
+            var extractedSourceDir = Path.GetDirectoryName(extractedExe)!;
+
             var bat = $"""
                 @echo off
                 chcp 65001 > nul
@@ -206,7 +209,7 @@ public sealed class AppUpdaterService : IAppUpdaterService
                     goto waitloop
                 )
                 echo [FluxRoute Updater] Устанавливаем v{update.Version}...
-                copy /Y "{extractedExe}" "{newExePath}" > nul
+                xcopy /E /Y /I "{extractedSourceDir}\*" "{exeDir}\"
                 if errorlevel 1 (
                     echo [FluxRoute Updater] Ошибка копирования!
                     pause
@@ -223,14 +226,12 @@ public sealed class AppUpdaterService : IAppUpdaterService
             await File.WriteAllTextAsync(batPath, bat, System.Text.Encoding.UTF8, ct);
             onProgress("🚀 Запускаем установщик...");
 
-            // ── 4. Запускаем bat скрытым процессом ───────────────────────
+            // ── 4. Запускаем bat через ShellExecute (обязательно для WindowStyle.Hidden + start) ──
             var psi = new ProcessStartInfo
             {
-                FileName        = "cmd.exe",
-                Arguments       = $"/C \"{batPath}\"",
+                FileName        = batPath,
                 WindowStyle     = ProcessWindowStyle.Hidden,
-                CreateNoWindow  = true,
-                UseShellExecute = false
+                UseShellExecute = true
             };
             Process.Start(psi);
 
