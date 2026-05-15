@@ -108,31 +108,34 @@ public sealed class AppUpdaterService : IAppUpdaterService
 
     /// <summary>
     /// Извлекает тег последнего релиза из Atom XML.
-    /// Формат id: tag:github.com,2008:Repository/123/v1.4.1
+    /// Atom-лента GitHub: первый &lt;entry&gt; = самый свежий релиз.
+    /// Формат id внутри entry: tag:github.com,2008:Repository/123456789/v1.4.1
     /// </summary>
     private static string? ParseLatestTagFromAtom(string xml)
     {
-        // Используем простой поиск по тексту — не тянем XML-парсер,
-        // структура Atom от GitHub стабильна.
-        const string entryIdOpen  = "<id>tag:github.com,";
-        const string entryIdClose = "</id>";
+        const string entryOpen = "<entry>";
+        const string idOpen    = "<id>tag:github.com,";
+        const string idClose   = "</id>";
 
-        var start = xml.IndexOf(entryIdOpen, StringComparison.Ordinal);
-        if (start < 0) return null;
+        // Ищем первый <entry> — это самый свежий релиз
+        var entryStart = xml.IndexOf(entryOpen, StringComparison.Ordinal);
+        if (entryStart < 0) return null;
 
-        // Пропускаем до конца блока "tag:github.com,2008:Repository/NNNN/"
-        var slashIndex = xml.IndexOf('/', start);
-        if (slashIndex < 0) return null;
+        // Ищем <id> внутри этого entry
+        var idStart = xml.IndexOf(idOpen, entryStart, StringComparison.Ordinal);
+        if (idStart < 0) return null;
 
-        // Ещё один слеш — после ID репозитория идёт тег
-        var tagStart = xml.IndexOf('/', slashIndex + 1);
-        if (tagStart < 0) return null;
-        tagStart++; // пропускаем сам '/'
+        var idEnd = xml.IndexOf(idClose, idStart, StringComparison.Ordinal);
+        if (idEnd < 0) return null;
 
-        var tagEnd = xml.IndexOf(entryIdClose, tagStart, StringComparison.Ordinal);
-        if (tagEnd < 0) return null;
+        // Берём содержимое тега: "<id>tag:github.com,2008:Repository/123456789/v1.4.1"
+        var idContent = xml[idStart..idEnd];
 
-        return xml[tagStart..tagEnd].Trim();
+        // Тег — всё после последнего '/'
+        var lastSlash = idContent.LastIndexOf('/');
+        if (lastSlash < 0) return null;
+
+        return idContent[(lastSlash + 1)..].Trim();
     }
 
     public async Task<(bool success, string? error)> DownloadAndApplyAsync(
@@ -154,14 +157,23 @@ public sealed class AppUpdaterService : IAppUpdaterService
             // ── 1. Скачиваем zip ──────────────────────────────────────────
             onProgress($"⬇️ Скачиваем FluxRoute v{update.Version}...");
 
-            using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
+            // Создаём отдельный клиент с авто-редиректами (GitHub → CDN) и большим таймаутом
+            using var http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true })
+            {
+                Timeout = TimeSpan.FromMinutes(5)
+            };
             http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
 
-            var bytes = await http.GetByteArrayAsync(update.DownloadUrl, ct);
-            var hash  = Convert.ToHexString(SHA256.HashData(bytes));
-            onProgress($"🔒 SHA-256: {hash}");
+            using var response = await http.GetAsync(update.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!response.IsSuccessStatusCode)
+                return (false, $"Ошибка скачивания: {(int)response.StatusCode} {response.ReasonPhrase}");
 
-            await File.WriteAllBytesAsync(tempZip, bytes, ct);
+            await using (var stream = await response.Content.ReadAsStreamAsync(ct))
+            await using (var file   = File.Create(tempZip))
+                await stream.CopyToAsync(file, ct);
+
+            var hash = Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(tempZip, ct)));
+            onProgress($"🔒 SHA-256: {hash}");
             onProgress("✅ Загрузка завершена");
 
             // ── 2. Распаковываем zip ──────────────────────────────────────
