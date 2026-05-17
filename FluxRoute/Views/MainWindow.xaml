@@ -8,13 +8,10 @@
         Title="FluxRoute"
         Height="520" Width="860"
         WindowStartupLocation="CenterScreen"
-        Background="#12141E"
+        Background="Transparent"
+        AllowsTransparency="True"
         WindowStyle="None"
         ResizeMode="NoResize">
-
-    <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0"/>
-    </WindowChrome.WindowChrome>
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -97,19 +94,19 @@
         <!-- ══ NAV ICON BUTTON ══ -->
         <Style x:Key="NavIconBtn" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Width" Value="56"/>
-            <Setter Property="Height" Value="56"/>
+            <Setter Property="Width" Value="52"/>
+            <Setter Property="Height" Value="36"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="12" Margin="7,3">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" Margin="0">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#1A2040"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#151A30"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -452,8 +449,8 @@
 
                         <StackPanel Grid.Row="0" Margin="0,8,0,0">
                             <!-- Nav: Главная (0) -->
-                            <Grid>
-                                <Border x:Name="NavBg0" CornerRadius="10" Margin="6,2">
+                            <Grid Margin="0,4,0,4">
+                                <Border x:Name="NavBg0" CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -472,7 +469,8 @@
                                                 <Setter Property="Foreground" Value="#4A5170"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedTabIndex}" Value="0">
-                                                        <Setter Property="Foreground" Value="#4A90E2"/>
+                                                        <Setter Property="Foreground" Value="#E9E9F8"/>
+                                                        <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/></Setter.Value></Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -482,8 +480,8 @@
                             </Grid>
 
                             <!-- Nav: TG Прокси (1) -->
-                            <Grid>
-                                <Border CornerRadius="10" Margin="6,2">
+                            <Grid Margin="0,4,0,4">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -502,7 +500,8 @@
                                                 <Setter Property="Foreground" Value="#4A5170"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
-                                                        <Setter Property="Foreground" Value="#4A90E2"/>
+                                                        <Setter Property="Foreground" Value="#E9E9F8"/>
+                                                        <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/></Setter.Value></Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -512,8 +511,8 @@
                             </Grid>
 
                             <!-- Nav: Оркестратор (2) -->
-                            <Grid>
-                                <Border CornerRadius="10" Margin="6,2">
+                            <Grid Margin="0,4,0,4">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -532,7 +531,8 @@
                                                 <Setter Property="Foreground" Value="#4A5170"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
-                                                        <Setter Property="Foreground" Value="#4A90E2"/>
+                                                        <Setter Property="Foreground" Value="#E9E9F8"/>
+                                                        <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/></Setter.Value></Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -542,8 +542,8 @@
                             </Grid>
 
                             <!-- Nav: Обновление (3) -->
-                            <Grid>
-                                <Border CornerRadius="10" Margin="6,2">
+                            <Grid Margin="0,4,0,4">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -562,7 +562,8 @@
                                                 <Setter Property="Foreground" Value="#4A5170"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
-                                                        <Setter Property="Foreground" Value="#4A90E2"/>
+                                                        <Setter Property="Foreground" Value="#E9E9F8"/>
+                                                        <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/></Setter.Value></Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -572,8 +573,8 @@
                             </Grid>
 
                             <!-- Nav: Диагностика (4) -->
-                            <Grid>
-                                <Border CornerRadius="10" Margin="6,2">
+                            <Grid Margin="0,4,0,4">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -592,7 +593,8 @@
                                                 <Setter Property="Foreground" Value="#4A5170"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedTabIndex}" Value="4">
-                                                        <Setter Property="Foreground" Value="#4A90E2"/>
+                                                        <Setter Property="Foreground" Value="#E9E9F8"/>
+                                                        <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/></Setter.Value></Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -602,8 +604,8 @@
                             </Grid>
 
                             <!-- Nav: Логи (7) -->
-                            <Grid>
-                                <Border CornerRadius="10" Margin="6,2">
+                            <Grid Margin="0,4,0,4">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -622,7 +624,8 @@
                                                 <Setter Property="Foreground" Value="#4A5170"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedTabIndex}" Value="7">
-                                                        <Setter Property="Foreground" Value="#4A90E2"/>
+                                                        <Setter Property="Foreground" Value="#E9E9F8"/>
+                                                        <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/></Setter.Value></Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -632,8 +635,8 @@
                             </Grid>
 
                             <!-- Nav: Настройки / Сервис (5) -->
-                            <Grid>
-                                <Border CornerRadius="10" Margin="6,2">
+                            <Grid Margin="0,4,0,4">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -652,7 +655,8 @@
                                                 <Setter Property="Foreground" Value="#4A5170"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedTabIndex}" Value="5">
-                                                        <Setter Property="Foreground" Value="#4A90E2"/>
+                                                        <Setter Property="Foreground" Value="#E9E9F8"/>
+                                                        <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/></Setter.Value></Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -665,8 +669,8 @@
                         <!-- Bottom nav: О программе (6) -->
                         <StackPanel Grid.Row="1" Margin="0,0,0,12">
                             <Rectangle Height="1" Fill="#1E2235" Margin="8,4"/>
-                            <Grid>
-                                <Border CornerRadius="10" Margin="6,2">
+                            <Grid Margin="0,4,0,4">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -685,7 +689,8 @@
                                                 <Setter Property="Foreground" Value="#4A5170"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
-                                                        <Setter Property="Foreground" Value="#4A90E2"/>
+                                                        <Setter Property="Foreground" Value="#E9E9F8"/>
+                                                        <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/></Setter.Value></Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -884,7 +889,7 @@
                                 <!-- Row 1: Status pill -->
                                 <Border Grid.Row="1" HorizontalAlignment="Center"
                                         Background="#0A0D1A" BorderBrush="#1E2440" BorderThickness="1"
-                                        CornerRadius="20" Padding="24,7">
+                                        CornerRadius="16" Padding="24,7">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <Ellipse Width="7" Height="7" Margin="0,0,8,0" VerticalAlignment="Center">
                                             <Ellipse.Style>
@@ -2083,7 +2088,8 @@
 
             <!-- Status bar bottom -->
             <Border Grid.Row="1" VerticalAlignment="Bottom" Height="26"
-                    Background="#0C0F17" BorderBrush="#181B28" BorderThickness="0,1,0,0">
+                    Background="#0C0F17" BorderBrush="#181B28" BorderThickness="0,1,0,0"
+                    CornerRadius="0,0,12,12">
                 <Grid Margin="82,0,16,0">
                     <TextBlock FontFamily="Segoe UI" FontSize="10.5" Foreground="#EEF1F9"
                                VerticalAlignment="Center" HorizontalAlignment="Left">
