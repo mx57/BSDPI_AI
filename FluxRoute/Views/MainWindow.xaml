@@ -576,12 +576,30 @@
                                     </StackPanel>
                                 </Button>
 
-                                <!-- Nav: Обновление -->
+                                <!-- Nav: ИИ -->
                                 <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="3" d:IsLocked="True">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
+                                                    <Setter Property="Foreground" Value="#E6EDF3"/>
+                                                    <Setter Property="Background" Value="#161B22"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <StackPanel Orientation="Horizontal" d:IsLocked="True">
+                                        <TextBlock Text="🧠" Width="20" TextAlignment="Center" d:IsLocked="True"/>
+                                        <TextBlock Text="ИИ" Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}" d:IsLocked="True"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- Nav: Обновление -->
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="4" d:IsLocked="True">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="4">
                                                     <Setter Property="Foreground" Value="#E6EDF3"/>
                                                     <Setter Property="Background" Value="#161B22"/>
                                                 </DataTrigger>
@@ -595,11 +613,11 @@
                                 </Button>
 
                                 <!-- Nav: Диагностика -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="4" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="5" d:IsLocked="True">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="4">
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="5">
                                                     <Setter Property="Foreground" Value="#E6EDF3"/>
                                                     <Setter Property="Background" Value="#161B22"/>
                                                 </DataTrigger>
@@ -613,11 +631,11 @@
                                 </Button>
 
                                 <!-- Nav: Сервис -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="5" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="6" d:IsLocked="True">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="5">
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
                                                     <Setter Property="Foreground" Value="#E6EDF3"/>
                                                     <Setter Property="Background" Value="#161B22"/>
                                                 </DataTrigger>
@@ -631,11 +649,11 @@
                                 </Button>
 
                                 <!-- Nav: Логи -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="7" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="8" d:IsLocked="True">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="7">
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="8">
                                                     <Setter Property="Foreground" Value="#E6EDF3"/>
                                                     <Setter Property="Background" Value="#161B22"/>
                                                 </DataTrigger>
@@ -665,11 +683,11 @@
                         <!-- Nav: О программе -->
                         <Border Grid.Row="3" BorderBrush="#21262D" BorderThickness="0,1,0,0"
                                 Background="#0D1117" Padding="0,4,0,4" d:IsLocked="True">
-                            <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="6" d:IsLocked="True">
+                            <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="7" d:IsLocked="True">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
+                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="7">
                                                 <Setter Property="Foreground" Value="#E6EDF3"/>
                                                 <Setter Property="Background" Value="#161B22"/>
                                             </DataTrigger>
@@ -945,8 +963,6 @@
                                                 </Style>
                                             </Button.Style>
                                         </Button>
-                                        <Button Content="🔍 Проверить сейчас" Style="{StaticResource TermBtn}"
-                                                Command="{Binding CheckNowCommand}" d:IsLocked="True"/>
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4" d:IsLocked="True">
@@ -970,6 +986,72 @@
                                         <CheckBox Content="Instagram" IsChecked="{Binding SiteInstagram}" Margin="0,4,16,4" d:IsLocked="True"/>
                                         <CheckBox Content="Telegram" IsChecked="{Binding SiteTelegram}" Margin="0,4,16,4" d:IsLocked="True"/>
                                     </WrapPanel>
+
+                                    <Border Margin="0,0,0,8" d:IsLocked="True">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AiEnabled}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel d:IsLocked="True">
+                                            <TextBlock Style="{StaticResource SecH}" Text="СТРАТЕГИИ ИИ" d:IsLocked="True"/>
+                                            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E" TextWrapping="Wrap" Margin="0,0,0,8"
+                                                       Text="Снимите галочку, чтобы исключить стратегию из подбора ИИ и эволюции." d:IsLocked="True"/>
+                                            <ItemsControl ItemsSource="{Binding AiStrategyRows}" d:IsLocked="True">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="#161B22" Padding="10,6" Margin="0,2" d:IsLocked="True">
+                                                            <Grid d:IsLocked="True">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0" d:IsLocked="True">
+                                                                    <CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" Margin="0,0,6,0" d:IsLocked="True"/>
+                                                                    <Button Content="🗑" Style="{StaticResource RedBtn}" Width="28" Height="28" Padding="0" FontSize="12"
+                                                                            Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"
+                                                                            Command="{Binding DataContext.DeleteAiStrategyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}"
+                                                                            ToolTip="Удалить эволюционированную стратегию" d:IsLocked="True"/>
+                                                                </StackPanel>
+                                                                <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
+                                                                    <TextBlock Text="{Binding DisplayName}" FontFamily="Segoe UI" Foreground="#E6EDF3" FontSize="13" d:IsLocked="True"/>
+                                                                    <TextBlock Text="{Binding OriginTag}" FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" d:IsLocked="True"/>
+                                                                </StackPanel>
+                                                                <TextBlock Grid.Column="2" Text="{Binding WilsonText}" ToolTip="{Binding WilsonToolTip}" FontFamily="Segoe UI" Foreground="#4FC3F7" FontSize="12" VerticalAlignment="Center" Margin="8,0,8,0" d:IsLocked="True"/>
+                                                                <TextBlock Grid.Column="3" Text="{Binding VerificationText}" ToolTip="{Binding VerificationToolTip}" FontFamily="Segoe UI" Foreground="#79C0FF" FontSize="12" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <Button Content="🔍 Проверить сейчас" Style="{StaticResource TermBtn}"
+                                                    HorizontalAlignment="Left" Margin="0,10,0,0"
+                                                    Command="{Binding CheckNowCommand}" d:IsLocked="True"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Button HorizontalAlignment="Left" Margin="0,0,0,8"
+                                            Command="{Binding CheckNowCommand}" d:IsLocked="True">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource TermBtn}">
+                                                <Setter Property="Content" Value="🔍 Проверить сейчас"/>
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AiEnabled}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
 
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
 
@@ -1034,7 +1116,7 @@
                         </Border>
 
                         <!-- ╔══════════════════════════════════════╗ -->
-                        <!-- ║       TAB 2: ОБНОВЛЕНИЕ             ║ -->
+                        <!-- ║       TAB 3: ИИ                     ║ -->
                         <!-- ╚══════════════════════════════════════╝ -->
                         <Border d:IsLocked="True">
                             <Border.Style>
@@ -1043,6 +1125,116 @@
                                     <Setter Property="Opacity" Value="0"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1" Duration="0:0:0.3">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut"/>
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
+                                <StackPanel Margin="16,12" d:IsLocked="True">
+                                    <TextBlock Style="{StaticResource SecH}" Text="РЕЖИМ ИИ" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <CheckBox Content="Включить самообучаемый подбор стратегий (оркестратор использует ИИ)"
+                                              IsChecked="{Binding AiEnabled}" Margin="0,0,0,10" d:IsLocked="True"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Exploration (‰): " VerticalAlignment="Center" Margin="0,0,8,0" d:IsLocked="True"/>
+                                        <TextBox Text="{Binding AiExplorationPermil, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="60" Height="26" VerticalContentAlignment="Center" d:IsLocked="True"/>
+                                    </StackPanel>
+
+                                    <Grid Margin="0,0,0,12" d:IsLocked="True">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Сеть:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiNetworkLabel}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Поколение:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiGenerationText}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Проб в истории:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiProbeCountText}" d:IsLocked="True"/>
+                                    </Grid>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10" d:IsLocked="True">
+                                        <Button Content="⚗ Эволюция сейчас" Style="{StaticResource AccentBtn}"
+                                                Margin="0,0,10,0" Command="{Binding RunAiEvolutionCommand}" d:IsLocked="True"/>
+                                        <Button Content="↺ Сброс модели" Style="{StaticResource TermBtn}"
+                                                Margin="0,0,10,0" Command="{Binding ResetAiModelCommand}" d:IsLocked="True"/>
+                                        <Button Content="📁 ai-evolved" Style="{StaticResource TermBtn}"
+                                                Command="{Binding OpenAiEvolvedFolderCommand}" d:IsLocked="True"/>
+                                    </StackPanel>
+
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource SecH}" Text="СТРАТЕГИИ" d:IsLocked="True"/>
+                                        <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="12,2,0,0"
+                                                   Text="{Binding AiStrategyRowCount, StringFormat='({0})'}" d:IsLocked="True"/>
+                                    </StackPanel>
+                                    <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E" TextWrapping="Wrap" Margin="0,0,0,8"
+                                               Text="Галочки и ручная проверка — на вкладке «Оркестратор»." d:IsLocked="True"/>
+                                    <Border MaxHeight="360" BorderBrush="#30363D" BorderThickness="1" CornerRadius="6" Margin="0,0,0,8" d:IsLocked="True">
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
+                                            <ListBox ItemsSource="{Binding AiStrategyRows}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" d:IsLocked="True">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="#161B22" Padding="10,6" Margin="0,2" d:IsLocked="True">
+                                                            <Grid d:IsLocked="True">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center">
+                                                                    <TextBlock Text="{Binding DisplayName}" FontFamily="Segoe UI" Foreground="#E6EDF3" FontSize="13" d:IsLocked="True"/>
+                                                                    <TextBlock Text="{Binding OriginTag}" FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" d:IsLocked="True"/>
+                                                                </StackPanel>
+                                                                <TextBlock Grid.Column="1" Text="{Binding WilsonText}" ToolTip="{Binding WilsonToolTip}" FontFamily="Segoe UI" Foreground="#4FC3F7" FontSize="12" VerticalAlignment="Center" Margin="8,0,8,0" d:IsLocked="True"/>
+                                                                <TextBlock Grid.Column="2" Text="{Binding VerificationText}" ToolTip="{Binding VerificationToolTip}" FontFamily="Segoe UI" Foreground="#79C0FF" FontSize="12" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </ScrollViewer>
+                                    </Border>
+
+                                    <TextBlock Margin="0,12,0,0" FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                                               TextWrapping="Wrap" d:IsLocked="True"
+                                               Text="ИИ использует оркестратор проверок на вкладке «Оркестратор». Новые стратегии сохраняются в engine/ai-evolved."/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- ╔══════════════════════════════════════╗ -->
+                        <!-- ║       TAB 4: ОБНОВЛЕНИЕ             ║ -->
+                        <!-- ╚══════════════════════════════════════╝ -->
+                        <Border d:IsLocked="True">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Setter Property="Opacity" Value="0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="4">
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <DataTrigger.EnterActions>
                                                 <BeginStoryboard>
@@ -1218,7 +1410,7 @@
                         </Border>
 
                         <!-- ╔══════════════════════════════════════╗ -->
-                        <!-- ║       TAB 3: ДИАГНОСТИКА            ║ -->
+                        <!-- ║       TAB 5: ДИАГНОСТИКА            ║ -->
                         <!-- ╚══════════════════════════════════════╝ -->
                         <Border d:IsLocked="True">
                             <Border.Style>
@@ -1226,7 +1418,7 @@
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                     <Setter Property="Opacity" Value="0"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="4">
+                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="5">
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <DataTrigger.EnterActions>
                                                 <BeginStoryboard>
@@ -1315,7 +1507,7 @@
                         </Border>
 
                         <!-- ╔══════════════════════════════════════╗ -->
-                        <!-- ║         TAB 4: СЕРВИС               ║ -->
+                        <!-- ║         TAB 6: СЕРВИС               ║ -->
                         <!-- ╚══════════════════════════════════════╝ -->
                         <Border d:IsLocked="True">
                             <Border.Style>
@@ -1323,7 +1515,7 @@
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                     <Setter Property="Opacity" Value="0"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="5">
+                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <DataTrigger.EnterActions>
                                                 <BeginStoryboard>
@@ -1478,7 +1670,7 @@
 
 
                         <!-- ╔══════════════════════════════════════╗ -->
-                        <!-- ║          TAB 7: ЛОГИ                ║ -->
+                        <!-- ║          TAB 8: ЛОГИ                ║ -->
                         <!-- ╚══════════════════════════════════════╝ -->
                         <Border d:IsLocked="True">
                             <Border.Style>
@@ -1486,7 +1678,7 @@
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                     <Setter Property="Opacity" Value="0"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="7">
+                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="8">
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <Setter Property="Opacity" Value="1"/>
                                         </DataTrigger>
@@ -1547,7 +1739,7 @@
                         </Border>
 
                         <!-- ╔══════════════════════════════════════╗ -->
-                        <!-- ║       TAB 5: О ПРОГРАММЕ            ║ -->
+                        <!-- ║       TAB 7: О ПРОГРАММЕ            ║ -->
                         <!-- ╚══════════════════════════════════════╝ -->
                         <Border d:IsLocked="True">
                             <Border.Style>
@@ -1555,7 +1747,7 @@
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                     <Setter Property="Opacity" Value="0"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
+                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="7">
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <DataTrigger.EnterActions>
                                                 <BeginStoryboard>
