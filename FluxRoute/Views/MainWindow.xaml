@@ -122,6 +122,14 @@
                                                         To="#151A30" Duration="0:0:0.18">
                                             <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
                                         </ColorAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                                         To="1.12" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                         To="1.12" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </EventTrigger>
@@ -133,6 +141,14 @@
                                                         To="Transparent" Duration="0:0:0.22">
                                             <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
                                         </ColorAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                                         To="1.0" Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                         To="1.0" Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </EventTrigger>
@@ -961,8 +977,23 @@
                             </Grid>
                         </StackPanel>
 
-                        <!-- Hidden indicator for code-behind compat -->
-                        <Border x:Name="NavIndicatorBorder" Width="0" Height="0" Visibility="Collapsed" d:IsLocked="True">
+                        <!-- Active tab pill indicator -->
+                        <Border x:Name="NavIndicatorBorder"
+                                Width="3" Height="20"
+                                CornerRadius="1.5"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Margin="0,20,0,0"
+                                d:IsLocked="True">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#BB88FF" Offset="0"/>
+                                    <GradientStop Color="#7744EE" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/>
+                            </Border.Effect>
                             <Border.RenderTransform>
                                 <TranslateTransform x:Name="NavIndicatorTransform"/>
                             </Border.RenderTransform>

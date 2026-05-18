@@ -274,23 +274,32 @@ public partial class MainWindow : Window
 
     private void AnimateNavIndicator(int tabIndex)
     {
-        // The About page is pinned to the bottom of the sidebar.
-        // Logs use tab index 8, but visually they are placed right after Service
-        // because About was removed from the main navigation list.
+        // Tab 7 (About) is pinned to the bottom — slide pill below main nav zone
+        double targetY;
         if (tabIndex == 7)
         {
-            SetNavIndicatorVisible(false);
-            return;
+            targetY = 9 * 44;
+        }
+        else
+        {
+            // Map logical tab index to visual position in StackPanel
+            // Order: 0,1,2,3,4,5,8(logs→6),6(settings→7)
+            int visualIndex = tabIndex switch
+            {
+                8 => 6,
+                6 => 7,
+                _ => tabIndex
+            };
+            // Each row: Height=36 + Margin 4+4=8 → 44px per slot
+            // StackPanel Margin top=8; pill center: 8 + visualIndex*44 + (44-20)/2
+            targetY = 8 + visualIndex * 44 + 12;
         }
 
-        SetNavIndicatorVisible(true);
-
-        var visualIndex = tabIndex > 7 ? tabIndex - 1 : tabIndex;
         var animation = new DoubleAnimation
         {
-            To = visualIndex * 36,
-            Duration = TimeSpan.FromMilliseconds(300),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            To = targetY,
+            Duration = TimeSpan.FromMilliseconds(280),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
         NavIndicatorTransform.BeginAnimation(TranslateTransform.YProperty, animation);
     }
@@ -527,12 +536,8 @@ public partial class MainWindow : Window
 
     private void SetNavIndicatorVisible(bool visible)
     {
-        _navIndicatorBorder ??= EnumerateDescendants(this)
-            .OfType<WpfBorder>()
-            .FirstOrDefault(border => ReferenceEquals(border.RenderTransform, NavIndicatorTransform));
-
-        if (_navIndicatorBorder is not null)
-            _navIndicatorBorder.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
+        // Pill is always visible; toggle no longer needed
+        _ = visible;
     }
 
     private void AddLogsNavigationButton()
