@@ -114,44 +114,48 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <EventTrigger RoutedEvent="Border.MouseEnter" SourceName="Bd">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="BdBrush"
-                                                        Storyboard.TargetProperty="Color"
-                                                        To="#151A30" Duration="0:0:0.18">
-                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
-                                        </ColorAnimation>
-                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                                         To="1.12" Duration="0:0:0.15">
-                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                         To="1.12" Duration="0:0:0.15">
-                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <EventTrigger RoutedEvent="Border.MouseLeave" SourceName="Bd">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="BdBrush"
-                                                        Storyboard.TargetProperty="Color"
-                                                        To="Transparent" Duration="0:0:0.22">
-                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
-                                        </ColorAnimation>
-                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                                         To="1.0" Duration="0:0:0.2">
-                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                         To="1.0" Duration="0:0:0.2">
-                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard Name="HoverEnterSB">
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="BdBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            From="Transparent" To="#151A30" Duration="0:0:0.18"
+                                                            FillBehavior="HoldEnd">
+                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                                             To="1.12" Duration="0:0:0.15" FillBehavior="HoldEnd">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                             To="1.12" Duration="0:0:0.15" FillBehavior="HoldEnd">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <StopStoryboard BeginStoryboardName="HoverEnterSB"/>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="BdBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="Transparent" Duration="0:0:0.22" FillBehavior="HoldEnd">
+                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                                             To="1.0" Duration="0:0:0.2" FillBehavior="HoldEnd">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                             To="1.0" Duration="0:0:0.2" FillBehavior="HoldEnd">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
                             <EventTrigger RoutedEvent="Button.PreviewMouseLeftButtonDown">
                                 <BeginStoryboard>
                                     <Storyboard>
