@@ -1577,7 +1577,7 @@
                                     </Border>
 
                                     <!-- Card 2: Toggles -->
-                                    <Border Grid.Row="2" Background="#0E1120" BorderBrush="#1A1E30" BorderThickness="1"
+                                    <Border Grid.Row="4"
                                         CornerRadius="12" Padding="14,12" d:IsLocked="True">
                                         <StackPanel d:IsLocked="True">
                                             <!-- GameFilter -->
@@ -1635,7 +1635,7 @@
                                     </Border>
 
                                     <!-- Card 3: System status -->
-                                    <Border Grid.Row="4" Background="#0E1120" BorderBrush="#1A1E30" BorderThickness="1"
+                                    <Border Grid.Row="2"
                                         CornerRadius="12" Padding="14,10" d:IsLocked="True">
                                         <StackPanel d:IsLocked="True">
                                             <!-- Row: Admin -->
