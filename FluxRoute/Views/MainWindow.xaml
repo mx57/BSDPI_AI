@@ -707,7 +707,7 @@
                                     </Border.Style>
                                 </Border>
                                 <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="1" d:IsLocked="True">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE72E;" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE709;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -753,7 +753,7 @@
                                     </Border.Style>
                                 </Border>
                                 <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="2" d:IsLocked="True">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9F5;" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE8EF;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -845,7 +845,7 @@
                                     </Border.Style>
                                 </Border>
                                 <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="4" d:IsLocked="True">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE777;" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE898;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -891,7 +891,7 @@
                                     </Border.Style>
                                 </Border>
                                 <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="5" d:IsLocked="True">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9D9;" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE90F;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -937,7 +937,7 @@
                                     </Border.Style>
                                 </Border>
                                 <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="8" d:IsLocked="True">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9D2;" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9F9;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -972,7 +972,7 @@
                                     </Border.Style>
                                 </Border>
                                 <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="6" d:IsLocked="True">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE713;" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9D5;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
