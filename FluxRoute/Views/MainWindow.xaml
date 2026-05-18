@@ -213,44 +213,14 @@
             </Setter>
         </Style>
         <Style x:Key="CloseTitleBtn" TargetType="Button" BasedOn="{StaticResource TitleBtn}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" CornerRadius="0,8,0,0">
-                            <Border.Background>
-                                <SolidColorBrush x:Name="BdBrush" Color="Transparent"/>
-                            </Border.Background>
+                        <Border Background="Transparent" CornerRadius="0,8,0,0">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard Name="CloseHoverEnter">
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
-                                                            To="#882030" Duration="0:0:0.15" FillBehavior="HoldEnd">
-                                                <ColorAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </ColorAnimation.EasingFunction>
-                                            </ColorAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <StopStoryboard BeginStoryboardName="CloseHoverEnter"/>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
-                                                            To="Transparent" Duration="0:0:0.2" FillBehavior="HoldEnd">
-                                                <ColorAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </ColorAnimation.EasingFunction>
-                                            </ColorAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -636,8 +606,8 @@
                                         <Setter Property="Foreground" Value="#4A5170"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsMouseOver, ElementName=CloseBtn}" Value="True">
-                                                <Setter Property="Foreground" Value="#E8C0C0"/>
-                                            </DataTrigger>
+                                                                <Setter Property="Foreground" Value="#E8394A"/>
+                                                            </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </TextBlock.Style>
