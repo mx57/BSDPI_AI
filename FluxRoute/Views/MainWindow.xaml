@@ -573,7 +573,7 @@
                 <Grid Margin="12,0" d:IsLocked="True">
                     <!-- Logo mark -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" d:IsLocked="True">
-                        <Image Source="pack://application:,,,/FluxRoute;component/Resources/FluxRoute.png"
+                        <Image Source="/Resources/FluxRoute.png"
                                Width="22" Height="22" Margin="0,0,9,0"
                                RenderOptions.BitmapScalingMode="HighQuality" d:IsLocked="True"/>
                         <TextBlock VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="13" d:IsLocked="True">
@@ -606,8 +606,8 @@
                                         <Setter Property="Foreground" Value="#4A5170"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsMouseOver, ElementName=CloseBtn}" Value="True">
-                                                                <Setter Property="Foreground" Value="#E8394A"/>
-                                                            </DataTrigger>
+                                                <Setter Property="Foreground" Value="#E8394A"/>
+                                            </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </TextBlock.Style>
@@ -1394,33 +1394,25 @@
                                                         </Grid.ColumnDefinitions>
 
                                                         <!-- Icon badge -->
-                                                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="10"
-                                                            VerticalAlignment="Center" Margin="0,0,10,0" d:IsLocked="True">
-                                                            <Border.Background>
-                                                                <RadialGradientBrush>
-                                                                    <GradientStop Color="#0E2020" Offset="0"/>
-                                                                    <GradientStop Color="#081414" Offset="1"/>
-                                                                </RadialGradientBrush>
-                                                            </Border.Background>
-                                                            <Border.BorderBrush>
-                                                                <SolidColorBrush Color="#00C47A" Opacity="0.25"/>
-                                                            </Border.BorderBrush>
-                                                            <Border.BorderThickness>1</Border.BorderThickness>
-                                                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="16" Text="&#xEA18;"
-                                                                   Foreground="#00C47A"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
-                                                                <TextBlock.Effect>
-                                                                    <DropShadowEffect Color="#00D68F" BlurRadius="10" ShadowDepth="0" Opacity="0.6"/>
-                                                                </TextBlock.Effect>
-                                                            </TextBlock>
-                                                        </Border>
+                                                        <Grid Grid.Column="0" Width="18" Height="18"
+                                                              VerticalAlignment="Center" Margin="0,0,12,0" d:IsLocked="True">
+                                                            <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
+                                                                <Path Data="M8,1.5 L13,3.5 V7.7 C13,10.5 10.9,13.1 8,14.5 C5.1,13.1 3,10.5 3,7.7 V3.5 Z"
+                                                                      Fill="Transparent" Stroke="#00C47A" StrokeThickness="1.7"
+                                                                      StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                                                                    <Path.Effect>
+                                                                        <DropShadowEffect Color="#00D68F" BlurRadius="10" ShadowDepth="0" Opacity="0.6"/>
+                                                                    </Path.Effect>
+                                                                </Path>
+                                                            </Viewbox>
+                                                        </Grid>
 
                                                         <!-- Text -->
                                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,0" d:IsLocked="True">
                                                             <TextBlock Text="{Binding SelectedScriptName}"
                                                                    FontFamily="Segoe UI" FontSize="11"
                                                                    Foreground="#C0CEEC" FontWeight="SemiBold"
-                                                                   TextTrimming="CharacterEllipsis" MaxWidth="90" d:IsLocked="True"/>
+                                                                   TextTrimming="CharacterEllipsis" TextAlignment="Left" d:IsLocked="True"/>
                                                             <TextBlock Text="Профиль"
                                                                    FontFamily="Segoe UI" FontSize="9.5"
                                                                    Foreground="#2E3C5A" Margin="0,2,0,0" d:IsLocked="True"/>
@@ -1452,36 +1444,30 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <Grid HorizontalAlignment="Center" d:IsLocked="True">
+                                                    <Grid HorizontalAlignment="Left" Margin="14,0" d:IsLocked="True">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
 
                                                         <!-- Icon badge -->
-                                                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="10"
-                                                            VerticalAlignment="Center" Margin="0,0,10,0" d:IsLocked="True">
-                                                            <Border.Background>
-                                                                <RadialGradientBrush>
-                                                                    <GradientStop Color="#130E28" Offset="0"/>
-                                                                    <GradientStop Color="#0B0818" Offset="1"/>
-                                                                </RadialGradientBrush>
-                                                            </Border.Background>
-                                                            <Border.BorderBrush>
-                                                                <SolidColorBrush Color="#8040CC" Opacity="0.25"/>
-                                                            </Border.BorderBrush>
-                                                            <Border.BorderThickness>1</Border.BorderThickness>
-                                                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="16" Text="&#xE9F5;"
-                                                                   Foreground="#8040CC"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
-                                                                <TextBlock.Effect>
-                                                                    <DropShadowEffect Color="#9B5DE5" BlurRadius="10" ShadowDepth="0" Opacity="0.6"/>
-                                                                </TextBlock.Effect>
-                                                            </TextBlock>
-                                                        </Border>
+                                                        <Grid Grid.Column="0" Width="18" Height="18"
+                                                              VerticalAlignment="Center" Margin="0,0,12,0" d:IsLocked="True">
+                                                            <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
+                                                                <Grid Width="16" Height="16">
+                                                                    <Rectangle Width="12" Height="3" RadiusX="0.8" RadiusY="0.8" Stroke="#8040CC" StrokeThickness="1.4" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,1.5,0,0"/>
+                                                                    <Rectangle Width="12" Height="3" RadiusX="0.8" RadiusY="0.8" Stroke="#8040CC" StrokeThickness="1.4" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    <Ellipse Width="1.5" Height="1.5" Fill="#8040CC" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="3.3,2.6,0,0"/>
+                                                                    <Ellipse Width="1.5" Height="1.5" Fill="#8040CC" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3.3,0,0,0"/>
+                                                                    <Grid.Effect>
+                                                                        <DropShadowEffect Color="#9B5DE5" BlurRadius="10" ShadowDepth="0" Opacity="0.6"/>
+                                                                    </Grid.Effect>
+                                                                </Grid>
+                                                            </Viewbox>
+                                                        </Grid>
 
                                                         <!-- Text -->
-                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" d:IsLocked="True">
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,0" d:IsLocked="True">
                                                             <TextBlock Text="{Binding UptimeText, Mode=OneWay}"
                                                                    FontFamily="Segoe UI" FontSize="11"
                                                                    Foreground="#C0CEEC" FontWeight="SemiBold" d:IsLocked="True"/>
@@ -1516,36 +1502,28 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <Grid HorizontalAlignment="Center" d:IsLocked="True">
+                                                    <Grid HorizontalAlignment="Left" Margin="14,0" d:IsLocked="True">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
 
                                                         <!-- Icon badge -->
-                                                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="10"
-                                                            VerticalAlignment="Center" Margin="0,0,10,0" d:IsLocked="True">
-                                                            <Border.Background>
-                                                                <RadialGradientBrush>
-                                                                    <GradientStop Color="#1C1608" Offset="0"/>
-                                                                    <GradientStop Color="#110E06" Offset="1"/>
-                                                                </RadialGradientBrush>
-                                                            </Border.Background>
-                                                            <Border.BorderBrush>
-                                                                <SolidColorBrush Color="#D4A020" Opacity="0.25"/>
-                                                            </Border.BorderBrush>
-                                                            <Border.BorderThickness>1</Border.BorderThickness>
-                                                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="16" Text="&#xE945;"
-                                                                   Foreground="#D4A020"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
-                                                                <TextBlock.Effect>
-                                                                    <DropShadowEffect Color="#F0B429" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>
-                                                                </TextBlock.Effect>
-                                                            </TextBlock>
-                                                        </Border>
+                                                        <Grid Grid.Column="0" Width="18" Height="18"
+                                                              VerticalAlignment="Center" Margin="0,0,12,0" d:IsLocked="True">
+                                                            <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
+                                                                <Path Data="M9.2,1.5 L4.6,8.1 H8 L6.8,14.5 L11.4,7.9 H8.1 Z"
+                                                                      Fill="Transparent" Stroke="#D4A020" StrokeThickness="1.8"
+                                                                      StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                                                                    <Path.Effect>
+                                                                        <DropShadowEffect Color="#F0B429" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>
+                                                                    </Path.Effect>
+                                                                </Path>
+                                                            </Viewbox>
+                                                        </Grid>
 
                                                         <!-- Text -->
-                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" d:IsLocked="True">
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,0" d:IsLocked="True">
                                                             <TextBlock Text="{Binding PidText, Mode=OneWay}"
                                                                    FontFamily="Segoe UI" FontSize="11"
                                                                    Foreground="#C0CEEC" FontWeight="SemiBold" d:IsLocked="True"/>

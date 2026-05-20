@@ -29,7 +29,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Resources\FluxRoute.ico" />
+    <EmbeddedResource Include="Resources\FluxRoute.ico" LogicalName="FluxRoute.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\FluxRoute.png" />
   </ItemGroup>
 
   <ItemGroup>
