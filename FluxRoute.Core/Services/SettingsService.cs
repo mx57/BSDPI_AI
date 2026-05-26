@@ -21,6 +21,9 @@ public sealed class AppSettings
     public bool SiteInstagram { get; set; } = true;
     public bool SiteTelegram { get; set; } = true;
 
+    // Пользовательские пресеты конфигурации
+    public List<ConfigPreset> Presets { get; set; } = new();
+
     // Пользовательские сайты для проверки
     public List<string> UserSites { get; set; } = new();
 
@@ -69,6 +72,25 @@ public sealed class TgProxySettings
     public int BufKb { get; set; } = 256;
     public int PoolSize { get; set; } = 4;
     public double LogMaxMb { get; set; } = 5.0;
+}
+
+public sealed class ConfigPreset
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Name { get; set; } = "";
+
+    // Профиль
+    public string? ProfileFileName { get; set; }
+
+    // Game Filter
+    public bool GameFilterEnabled { get; set; } = false;
+    public string GameFilterProtocol { get; set; } = "TCP и UDP";
+
+    // IPSet
+    public string IpSetMode { get; set; } = "loaded";
+
+    // Авто-триггер по процессу (необязательно, напр. "rocketleague.exe")
+    public string TriggerProcess { get; set; } = "";
 }
 
 public sealed class ProfileRatingEntry

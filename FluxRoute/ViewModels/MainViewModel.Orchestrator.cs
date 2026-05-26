@@ -453,6 +453,7 @@ public partial class MainViewModel
             _orchestrator.Stop();
             _aiOrchestrator.Stop();
             OrchestratorRunning = false;
+            StopProcessMonitor();
             return;
         }
 
@@ -472,6 +473,7 @@ public partial class MainViewModel
         {
             _aiOrchestrator.Start();
             OrchestratorRunning = true;
+            StartProcessMonitor();
             return;
         }
 
@@ -491,6 +493,7 @@ public partial class MainViewModel
 
         _orchestrator.Start();
         OrchestratorRunning = true;
+        StartProcessMonitor();
     }
 
     [RelayCommand]
@@ -538,6 +541,103 @@ public partial class MainViewModel
         catch
         {
             return false;
+        }
+    }
+
+    // ── Мониторинг процессов для автопереключения пресетов ──
+
+    private CancellationTokenSource? _processMonitorCts;
+    private string? _presetBeforeGameTrigger; // имя пресета, который был активен до триггера
+
+    private void StartProcessMonitor()
+    {
+        if (_processMonitorCts is not null) return;
+
+        _processMonitorCts = new CancellationTokenSource();
+        var ct = _processMonitorCts.Token;
+        Task.Run(async () => await ProcessMonitorLoopAsync(ct).ConfigureAwait(false), ct);
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 👁 Мониторинг процессов запущен.");
+    }
+
+    private void StopProcessMonitor()
+    {
+        _processMonitorCts?.Cancel();
+        _processMonitorCts = null;
+        _activeTriggeredPreset = null;
+    }
+
+    private string? _activeTriggeredPreset; // Id активного тригерного пресета
+
+    private async Task ProcessMonitorLoopAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(3000, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) { break; }
+
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher is null || dispatcher.HasShutdownStarted) break;
+
+            await dispatcher.InvokeAsync(() =>
+            {
+                try { CheckProcessTriggers(); }
+                catch (Exception ex) { AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠ Ошибка мониторинга: {ex.Message}"); }
+            });
+        }
+    }
+
+    private void CheckProcessTriggers()
+    {
+        // Ищем первый пресет с триггером, чей процесс сейчас запущен
+        ConfigPreset? matched = null;
+        var triggeredPresets = Presets.Where(p => !string.IsNullOrWhiteSpace(p.TriggerProcess)).ToList();
+        if (triggeredPresets.Count == 0)
+        {
+            // Нет пресетов с триггером — нечего мониторить
+            return;
+        }
+        foreach (var p in triggeredPresets)
+        {
+            var raw = p.TriggerProcess.Trim();
+            var exeName = System.IO.Path.GetFileNameWithoutExtension(raw);
+            var procs = System.Diagnostics.Process.GetProcessesByName(exeName);
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🔍 Ищу «{exeName}» (из «{raw}») → найдено: {procs.Length}");
+            if (procs.Length > 0)
+            {
+                matched = p;
+                break;
+            }
+        }
+
+        var matchedId = matched?.Id.ToString();
+
+        if (matchedId != _activeTriggeredPreset)
+        {
+            if (matched is not null)
+            {
+                // Процесс появился → применяем пресет
+                _activeTriggeredPreset = matchedId;
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🎮 Обнаружен процесс «{matched.TriggerProcess}» → применяю пресет «{matched.Name}»");
+                _ = ApplyPreset(matched);
+            }
+            else if (_activeTriggeredPreset is not null)
+            {
+                // Процесс исчез → возвращаем первый пресет без триггера (если есть)
+                _activeTriggeredPreset = null;
+                var fallback = Presets.FirstOrDefault(p => string.IsNullOrWhiteSpace(p.TriggerProcess));
+                if (fallback is not null)
+                {
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён → возврат к пресету «{fallback.Name}»");
+                    _ = ApplyPreset(fallback);
+                }
+                else
+                {
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён (пресет возврата не задан)");
+                }
+            }
         }
     }
 }

@@ -30,6 +30,102 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<string> UpdateLogs => Updates.UpdateLogs;
     public ObservableCollection<string> ServiceLogs => Service.ServiceLogs;
 
+    // ── Пресеты конфигурации ──
+    public ObservableCollection<ConfigPreset> Presets { get; } = new();
+    public ObservableCollection<string> RunningProcesses { get; } = new();
+
+    [ObservableProperty] private string newPresetName = "";
+    [ObservableProperty] private string newPresetTrigger = "";
+
+    private bool _processPickerOpen;
+    public bool ProcessPickerOpen
+    {
+        get => _processPickerOpen;
+        set => SetProperty(ref _processPickerOpen, value);
+    }
+
+    [RelayCommand]
+    private void OpenProcessPicker()
+    {
+        RunningProcesses.Clear();
+        var procs = System.Diagnostics.Process.GetProcesses()
+            .Select(p => { try { return p.ProcessName + ".exe"; } catch { return null; } })
+            .Where(n => n is not null)
+            .Distinct()
+            .OrderBy(n => n)
+            .ToList();
+        foreach (var p in procs!)
+            RunningProcesses.Add(p!);
+        ProcessPickerOpen = true;
+    }
+
+    [RelayCommand]
+    private void PickProcess(string processName)
+    {
+        NewPresetTrigger = processName;
+        ProcessPickerOpen = false;
+    }
+
+    [RelayCommand]
+    private void SavePresetFromCurrent()
+    {
+        var name = NewPresetName.Trim();
+        if (string.IsNullOrEmpty(name)) name = $"Пресет {Presets.Count + 1}";
+
+        var preset = new ConfigPreset
+        {
+            Name = name,
+            ProfileFileName = SelectedProfile?.FileName,
+            GameFilterEnabled = Service.GameFilterEnabled,
+            GameFilterProtocol = Service.GameFilterProtocol,
+            IpSetMode = Service.IpSetMode,
+            TriggerProcess = NewPresetTrigger.Trim()
+        };
+        Presets.Add(preset);
+        NewPresetName = "";
+        NewPresetTrigger = "";
+        SaveSettings();
+        AddToRecentLogs($"✅ Пресет «{preset.Name}» сохранён");
+    }
+
+    [RelayCommand]
+    private async Task ApplyPreset(ConfigPreset preset)
+    {
+        AddToRecentLogs($"⚙️ Применяем пресет «{preset.Name}»...");
+
+        // 1. Переключить профиль
+        if (!string.IsNullOrEmpty(preset.ProfileFileName))
+        {
+            var profile = Profiles.FirstOrDefault(p => p.FileName == preset.ProfileFileName);
+            if (profile is not null && profile != SelectedProfile)
+            {
+                _suppressProfileWarning = true;
+                SelectedProfile = profile;
+                _suppressProfileWarning = false;
+            }
+        }
+
+        // 2. Применить GameFilter + IPSet через сервис
+        Service.ApplyPresetState(preset.GameFilterEnabled, preset.GameFilterProtocol, preset.IpSetMode);
+
+        // 3. Перезапустить защиту
+        if (IsRunning)
+        {
+            Stop();
+            await Task.Delay(1200).ConfigureAwait(false);
+            Application.Current.Dispatcher.Invoke(Start);
+        }
+
+        AddToRecentLogs($"✅ Пресет «{preset.Name}» применён");
+    }
+
+    [RelayCommand]
+    private void RemovePreset(ConfigPreset preset)
+    {
+        Presets.Remove(preset);
+        SaveSettings();
+    }
+
     // ── События ──
     public event EventHandler? OpenSettingsRequested;
     public event EventHandler? OpenAboutRequested;
@@ -274,6 +370,20 @@ public partial class MainViewModel : ObservableObject
             getSelectedProfileDisplayName: () => SelectedProfile?.DisplayName,
             addAppLog: msg => Logs.Add(msg));
 
+        Service.GetAutoTuneTargets = () =>
+        {
+            var sites = new List<string>();
+            if (SiteYouTube) sites.Add("YouTube");
+            if (SiteDiscord) sites.Add("Discord");
+            if (SiteGoogle) sites.Add("Google");
+            if (SiteTwitch) sites.Add("Twitch");
+            if (SiteInstagram) sites.Add("Instagram");
+            if (SiteTelegram) sites.Add("Telegram");
+            return sites
+                .SelectMany(s => FluxRoute.Core.Services.ConnectivityChecker.BuiltinSites.TryGetValue(s, out var e) ? e : Enumerable.Empty<FluxRoute.Core.Models.TargetEntry>())
+                .ToList();
+        };
+
         Updates = new UpdatesViewModel(
             updater: _updater,
             appUpdater: _appUpdater,
@@ -425,6 +535,10 @@ public partial class MainViewModel : ObservableObject
         TgProxyBufKb = settings.TgProxy.BufKb == 0 ? "256" : settings.TgProxy.BufKb.ToString();
         TgProxyPoolSize = settings.TgProxy.PoolSize == 0 ? "4" : settings.TgProxy.PoolSize.ToString();
         TgProxyLogMaxMb = settings.TgProxy.LogMaxMb == 0 ? "5.0" : settings.TgProxy.LogMaxMb.ToString();
+
+        Presets.Clear();
+        foreach (var p in settings.Presets ?? new())
+            Presets.Add(p);
     }
 
     public void SaveSettings()
@@ -474,7 +588,8 @@ public partial class MainViewModel : ObservableObject
                 BufKb = int.TryParse(TgProxyBufKb, out var bufKb) ? bufKb : 256,
                 PoolSize = int.TryParse(TgProxyPoolSize, out var poolSize) ? poolSize : 4,
                 LogMaxMb = double.TryParse(TgProxyLogMaxMb, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var logMb) ? logMb : 5.0
-            }
+            },
+            Presets = Presets.ToList()
         };
 
         _settingsService.Save(settings);
