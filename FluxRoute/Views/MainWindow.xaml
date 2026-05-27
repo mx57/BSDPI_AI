@@ -1933,10 +1933,10 @@
                                         <Button Margin="0,0,10,0" Command="{Binding ToggleOrchestratorCommand}" d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}">
-                                                    <Setter Property="Content" Value="Запустить оркестратор"/>
+                                                    <Setter Property="Content" Value="▶ Включить оркестратор"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding OrchestratorRunning}" Value="True">
-                                                            <Setter Property="Content" Value="Остановить оркестратор"/>
+                                                        <DataTrigger Binding="{Binding OrchestratorEnabled}" Value="True">
+                                                            <Setter Property="Content" Value="⏹ Отключить оркестратор"/>
                                                             <Setter Property="BorderBrush" Value="#6B1A1A"/>
                                                             <Setter Property="Foreground" Value="#E74C3C"/>
                                                         </DataTrigger>
@@ -1950,6 +1950,23 @@
                                         <TextBlock Style="{StaticResource Lbl}" Text="Интервал (мин): " Margin="0,0,8,0" d:IsLocked="True"/>
                                         <TextBox Text="{Binding OrchestratorInterval, UpdateSourceTrigger=PropertyChanged}"
                                              Width="50" Height="28" VerticalContentAlignment="Center" d:IsLocked="True"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Режим: " Margin="0,0,4,0" d:IsLocked="True"/>
+                                        <TextBlock d:IsLocked="True">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource Val}">
+                                                    <Setter Property="Text" Value="ручной"/>
+                                                    <Setter Property="Foreground" Value="#4A5170"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding OrchestratorEnabled}" Value="True">
+                                                            <Setter Property="Text" Value="автоматический"/>
+                                                            <Setter Property="Foreground" Value="#00D68F"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0" d:IsLocked="True">
                                         <TextBlock Style="{StaticResource Lbl}" Text="Следующая проверка: " Margin="0,0,4,0" d:IsLocked="True"/>
@@ -2400,12 +2417,83 @@
                                         <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AppVersion}" d:IsLocked="True"/>
                                     </Grid>
                                     <WrapPanel d:IsLocked="True">
+                                        <Button Content="🔍 Запустить диагностику" Style="{StaticResource ActionBtnAccent}" Margin="0,0,8,8" 
+                        Command="{Binding RunExtendedDiagnosticsCommand}" 
+                        IsEnabled="{Binding IsExtendedDiagnosticsRunning, Converter={StaticResource InvBool}}"
+                        ToolTip="Запустить расширенную проверку системы (без консольного окна)"
+                        d:IsLocked="True"/>
                                         <Button Content="Обновить"         Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding RefreshProfilesCommand}" d:IsLocked="True"/>
                                         <Button Content="Скопировать"      Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding CopyDiagnosticsCommand}" d:IsLocked="True"/>
                                         <Button Content="Экспорт логов"    Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding ExportLogsCommand}" d:IsLocked="True"/>
                                         <Button Content="Diagnostic Bundle" Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding ExportDiagnosticBundleCommand}"
-                                            ToolTip="Сохранить ZIP-архив с логами, диагностикой и настройками" d:IsLocked="True"/>
+                    ToolTip="Сохранить ZIP-архив с логами, диагностикой и настройками" d:IsLocked="True"/>
                                     </WrapPanel>
+
+                                    <!-- ── Результаты расширенной диагностики ── -->
+                                    <Border Background="#0D1117" 
+                    BorderBrush="#30363D" 
+                    BorderThickness="1" 
+                    CornerRadius="6" 
+                    Padding="12" 
+                    Margin="0,12,0,0"
+                    Visibility="{Binding ExtendedDiagnosticsVisible, Converter={StaticResource BoolToVis}}"
+                    d:IsLocked="True">
+                                        <Grid d:IsLocked="True">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+
+                                            <!-- Заголовок + прогресс + кнопки управления -->
+                                            <Grid Grid.Row="0" Margin="0,0,0,8" d:IsLocked="True">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" d:IsLocked="True">
+                                                    <TextBlock FontFamily="Segoe UI" FontSize="12" FontWeight="SemiBold" 
+                                       Foreground="#4A90E2" Margin="0,0,12,0" VerticalAlignment="Center"
+                                       Text="Результаты диагностики" d:IsLocked="True"/>
+                                                    <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E" 
+                                       VerticalAlignment="Center"
+                                       Visibility="{Binding IsExtendedDiagnosticsRunning, Converter={StaticResource BoolToVis}}"
+                                       Text="⏳ Выполняется..." d:IsLocked="True"/>
+                                                </StackPanel>
+
+                                                <!-- Кнопки управления справа -->
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" d:IsLocked="True">
+                                                    <Button Content="📋 Копировать" 
+                                    Style="{StaticResource ActionBtnAccent}" 
+                                    Margin="0,0,8,0"
+                                    Command="{Binding CopyExtendedDiagnosticsCommand}"
+                                    ToolTip="Скопировать все результаты диагностики в буфер обмена"
+                                    d:IsLocked="True"/>
+                                                    <Button Content="🗑 Очистить" 
+                                    Style="{StaticResource ActionBtn}" 
+                                    Command="{Binding ClearExtendedDiagnosticsCommand}"
+                                    ToolTip="Очистить результаты"
+                                    d:IsLocked="True"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Лог результатов -->
+                                            <ScrollViewer Grid.Row="1" MaxHeight="340" VerticalScrollBarVisibility="Auto" d:IsLocked="True">
+                                                <ItemsControl ItemsSource="{Binding ExtendedDiagnosticsResults}" d:IsLocked="True">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding}" 
+                                               FontFamily="Consolas" 
+                                               FontSize="11" 
+                                               Foreground="#C9D1D9" 
+                                               TextWrapping="Wrap"
+                                               Margin="0,2"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
                                 </StackPanel>
                             </ScrollViewer>
                         </Border>
