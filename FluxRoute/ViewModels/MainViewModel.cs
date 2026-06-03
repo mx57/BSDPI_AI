@@ -203,6 +203,8 @@ public partial class MainViewModel : ObservableObject
 
     private readonly IUpdaterService _updater;
     private readonly IAppUpdaterService _appUpdater;
+    private readonly IByeDpiUpdaterService _byeDpiUpdater;
+    private readonly DpiEngineManager _engineManager;
     private readonly ISettingsService _settingsService;
     private readonly IConnectivityChecker _connectivity;
     private bool _settingsLoaded = false;
@@ -237,7 +239,9 @@ public partial class MainViewModel : ObservableObject
         ISettingsService settingsService,
         IUpdaterService updaterService,
         IAppUpdaterService appUpdaterService,
+        IByeDpiUpdaterService byeDpiUpdaterService,
         IConnectivityChecker connectivity,
+        DpiEngineManager engineManager,
         NetworkFingerprintProvider aiFingerprints,
         NetworkChangeWatcher aiNetworkWatcher,
         AiStrategyRegistry aiRegistry,
@@ -248,8 +252,9 @@ public partial class MainViewModel : ObservableObject
     {
         _settingsService = settingsService;
         _updater = updaterService;
+        _byeDpiUpdater = byeDpiUpdaterService;
+        _engineManager = engineManager;
         _connectivity = connectivity;
-        _appUpdater = appUpdaterService;
         _aiRegistry = aiRegistry;
         _aiHistoryStore = aiHistoryStore;
         _aiFingerprints = aiFingerprints;
@@ -271,6 +276,7 @@ public partial class MainViewModel : ObservableObject
         Updates = new UpdatesViewModel(
             updater: _updater,
             appUpdater: _appUpdater,
+            byeDpiUpdater: _byeDpiUpdater,
             getEngineDir: () => EngineDir,
             getAutoUpdateEnabled: () => AutoUpdateEnabled,
             getCurrentEngineVersion: () => Updates.CurrentEngineVersion,
@@ -365,14 +371,14 @@ public partial class MainViewModel : ObservableObject
             RefreshProfilesInternalAsync,
             IsTrackedProcessRunning,
             EnsureProtectionRunningAsync,
-            connectivity,
+            _connectivity,
+            _engineManager,
             aiFingerprints,
             aiNetworkWatcher,
             aiRegistry,
             aiHistoryStore,
             aiBandit,
-            aiEvolver,
-            aiMaterializer);
+            aiEvolver);
         _aiOrchestrator.StatusChanged += OnOrchestratorStatus;
 
         _orchestratorUiTimer.Tick += (_, _) => UpdateOrchestratorNextCheck();
@@ -400,6 +406,8 @@ public partial class MainViewModel : ObservableObject
         settings.Ai ??= new AiSettings();
         AiEnabled = settings.Ai.Enabled;
         AiExplorationPermil = settings.Ai.ExplorationRatePermil;
+        UseHybridMode = settings.Ai.UseHybridMode;
+        ByeDpiSocksPort = settings.Ai.ByeDpiSocksPort;
 
         // TG Proxy — сбрасываем устаревшие дефолты
         TgProxyHost = string.IsNullOrWhiteSpace(settings.TgProxy.Host) || settings.TgProxy.Host == "0.0.0.0" ? "127.0.0.1" : settings.TgProxy.Host;

@@ -19,6 +19,12 @@ public interface IConnectivityChecker
     Task<CheckResult> CheckAsync(TargetEntry target, CancellationToken ct = default);
     Task<CheckResult> CheckAsync(TargetEntry target, bool useCurlForHttp, CancellationToken ct = default);
 
+    Task<CheckResult> CheckViaSocks5Async(
+        TargetEntry target,
+        string socksHost,
+        int socksPort,
+        CancellationToken ct = default);
+
     Task<(double successRate, List<CheckResult> results)> CheckAllAsync(
         IEnumerable<TargetEntry> targets,
         CancellationToken ct = default);
@@ -88,6 +94,146 @@ public sealed class ConnectivityChecker : IConnectivityChecker
     };
 
     public bool IsCurlAvailable => _curlAvailable.Value;
+
+    public async Task<CheckResult> CheckViaSocks5Async(
+        TargetEntry target,
+        string socksHost,
+        int socksPort,
+        CancellationToken ct = default)
+    {
+        if (target.Kind == TargetKind.Ping)
+            return await PingAsync(target, ct).ConfigureAwait(false);
+
+        if (IsCurlAvailable)
+            return await CurlSocks5Async(target, socksHost, socksPort, ct).ConfigureAwait(false);
+
+        return new CheckResult
+        {
+            Key = target.Key,
+            Kind = target.Kind,
+            Value = target.Value,
+            Ok = false,
+            Detail = "curl.exe required for SOCKS5 checks",
+            Checker = "Socks5"
+        };
+    }
+
+    private async Task<CheckResult> CurlSocks5Async(
+        TargetEntry target,
+        string socksHost,
+        int socksPort,
+        CancellationToken ct)
+    {
+        var sw = Stopwatch.StartNew();
+        var value = NormalizeUrl(target.Value);
+
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(DefaultTimeoutSeconds + 2));
+
+            using var process = StartCurlSocks5(value, socksHost, socksPort);
+            if (process is null)
+                return await HttpClientAsync(target, ct).ConfigureAwait(false);
+
+            var stdoutTask = process.StandardOutput.ReadToEndAsync(timeoutCts.Token);
+            var stderrTask = process.StandardError.ReadToEndAsync(timeoutCts.Token);
+
+            await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
+
+            var stdout = await stdoutTask.ConfigureAwait(false);
+            var stderr = await stderrTask.ConfigureAwait(false);
+            sw.Stop();
+
+            var metrics = ParseCurlMetrics(stdout);
+            var status = metrics.StatusCode;
+            var elapsedMs = metrics.TotalSeconds is null
+                ? sw.ElapsedMilliseconds
+                : (long)Math.Round(metrics.TotalSeconds.Value * 1000);
+
+            var ok = process.ExitCode == 0 && status is >= 200 and < 500;
+            var detail = BuildCurlDetail(status, process.ExitCode, metrics.ErrorMessage, stderr);
+
+            return new CheckResult
+            {
+                Key = target.Key,
+                Kind = target.Kind,
+                Value = value,
+                Ok = ok,
+                StatusCode = status,
+                ExitCode = process.ExitCode,
+                ElapsedMs = elapsedMs,
+                Detail = detail,
+                Checker = $"curl+socks5://{socksHost}:{socksPort}"
+            };
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            sw.Stop();
+            return new CheckResult
+            {
+                Key = target.Key,
+                Kind = target.Kind,
+                Value = value,
+                Ok = false,
+                ElapsedMs = sw.ElapsedMilliseconds,
+                Detail = "curl SOCKS5 timeout",
+                Checker = "curl+socks5"
+            };
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            return new CheckResult
+            {
+                Key = target.Key,
+                Kind = target.Kind,
+                Value = value,
+                Ok = false,
+                ElapsedMs = sw.ElapsedMilliseconds,
+                Detail = $"curl SOCKS5: {FirstLine(ex.Message)}",
+                Checker = "curl+socks5"
+            };
+        }
+    }
+
+    private static Process? StartCurlSocks5(string url, string socksHost, int socksPort)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "curl.exe",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        var outputTarget = OperatingSystem.IsWindows() ? "NUL" : "/dev/null";
+
+        psi.ArgumentList.Add("--location");
+        psi.ArgumentList.Add("--insecure");
+        psi.ArgumentList.Add("--silent");
+        psi.ArgumentList.Add("--show-error");
+        psi.ArgumentList.Add("--connect-timeout");
+        psi.ArgumentList.Add(DefaultConnectTimeoutSeconds.ToString(CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("--max-time");
+        psi.ArgumentList.Add(DefaultTimeoutSeconds.ToString(CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("--socks5");
+        psi.ArgumentList.Add($"{socksHost}:{socksPort}");
+        psi.ArgumentList.Add("--output");
+        psi.ArgumentList.Add(outputTarget);
+        psi.ArgumentList.Add("--user-agent");
+        psi.ArgumentList.Add(BrowserUserAgent);
+        psi.ArgumentList.Add("--write-out");
+        psi.ArgumentList.Add("FR_CURL_RESULT:%{http_code}|%{time_total}|%{remote_ip}|%{errormsg}");
+        psi.ArgumentList.Add(url);
+
+        return Process.Start(psi);
+    }
 
     public Task<CheckResult> CheckAsync(TargetEntry target, CancellationToken ct = default)
     {

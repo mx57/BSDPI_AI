@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using FluxRoute.AI.Models;
 
 namespace FluxRoute.AI.Services;
@@ -6,10 +7,10 @@ public sealed class BanditSelector
 {
     private readonly AiStrategyRegistry _registry;
     private readonly Random _rng;
-    private readonly Dictionary<Guid, DateTimeOffset> _blockedUntil = new();
-    private readonly Dictionary<string, DateTimeOffset> _sigCooldown = new();
-    private readonly Dictionary<string, DateTimeOffset> _familyCooldown = new();
-    private readonly Dictionary<Guid, int> _failureStreak = new();
+    private readonly ConcurrentDictionary<Guid, DateTimeOffset> _blockedUntil = new();
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _sigCooldown = new();
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _familyCooldown = new();
+    private readonly ConcurrentDictionary<Guid, int> _failureStreak = new();
 
     public BanditSelector(AiStrategyRegistry registry, Random? rng = null)
     {
@@ -23,7 +24,8 @@ public sealed class BanditSelector
         int explorationPermil)
     {
         var now = DateTimeOffset.UtcNow;
-        var usable = candidates.Where(g => !_blockedUntil.TryGetValue(g.Id, out var u) || u <= now).ToList();
+        var usable = candidates.Where(g =>
+            !_blockedUntil.TryGetValue(g.Id, out var u) || u <= now).ToList();
         if (usable.Count == 0)
             return null;
 
@@ -101,16 +103,14 @@ public sealed class BanditSelector
 
     public void RegisterSuccess(Guid genomeId)
     {
-        _failureStreak.Remove(genomeId);
-        _blockedUntil.Remove(genomeId);
+        _failureStreak.TryRemove(genomeId, out _);
+        _blockedUntil.TryRemove(genomeId, out _);
     }
 
     public void RegisterFailure(StrategyGenome g, string? failureSignature)
     {
         var id = g.Id;
-        _failureStreak.TryGetValue(id, out var streak);
-        streak++;
-        _failureStreak[id] = streak;
+        var streak = _failureStreak.AddOrUpdate(id, 1, (_, s) => s + 1);
 
         var backoffMs = streak switch
         {
@@ -124,10 +124,7 @@ public sealed class BanditSelector
         var delay = TimeSpan.FromMilliseconds(backoffMs * jitter);
         var until = DateTimeOffset.UtcNow + delay;
 
-        if (_blockedUntil.TryGetValue(id, out var existing))
-            until = until > existing ? until : existing;
-
-        _blockedUntil[id] = until;
+        _blockedUntil.AddOrUpdate(id, until, (_, existing) => until > existing ? until : existing);
 
         var famKey = $"{id:N}|{g.DesyncMode}";
         _familyCooldown[famKey] = DateTimeOffset.UtcNow.AddSeconds(15);

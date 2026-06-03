@@ -1,4 +1,5 @@
 using FluxRoute.AI.Models;
+using FluxRoute.Core.Models;
 
 namespace FluxRoute.AI.Services;
 
@@ -9,6 +10,13 @@ public static class StrategyGenomeValidator
 
     public static bool IsValid(StrategyGenome g)
     {
+        if (g.EngineType == DpiEngineType.ByeDpi)
+            return IsValidByeDpi(g);
+        return IsValidZapret(g);
+    }
+
+    private static bool IsValidZapret(StrategyGenome g)
+    {
         if (string.IsNullOrWhiteSpace(g.DesyncMode))
             return false;
 
@@ -18,7 +26,30 @@ public static class StrategyGenomeValidator
         return true;
     }
 
+    private static bool IsValidByeDpi(StrategyGenome g)
+    {
+        if (string.IsNullOrWhiteSpace(g.DisorderPos) &&
+            string.IsNullOrWhiteSpace(g.SplitPosSemantic) &&
+            string.IsNullOrWhiteSpace(g.FakePos) &&
+            string.IsNullOrWhiteSpace(g.TlsrecPos) &&
+            string.IsNullOrWhiteSpace(g.OobPos))
+            return false;
+
+        return true;
+    }
+
     public static void Normalize(StrategyGenome g)
+    {
+        if (g.EngineType == DpiEngineType.ByeDpi)
+        {
+            NormalizeByeDpi(g);
+            return;
+        }
+
+        NormalizeZapret(g);
+    }
+
+    private static void NormalizeZapret(StrategyGenome g)
     {
         if (!string.IsNullOrEmpty(g.FakeTlsMod) && !FakeModes.Contains(g.DesyncMode.ToLowerInvariant()))
             g.FakeTlsMod = null;
@@ -27,29 +58,12 @@ public static class StrategyGenomeValidator
             g.FakeTtl = null;
     }
 
-    public static StrategyGenome Clone(StrategyGenome g)
+    private static void NormalizeByeDpi(StrategyGenome g)
     {
-        return new StrategyGenome
-        {
-            Id = Guid.NewGuid(),
-            ParentIds = [.. g.ParentIds],
-            Generation = g.Generation,
-            Origin = g.Origin,
-            FilterTcp = g.FilterTcp,
-            FilterUdp = g.FilterUdp,
-            DesyncMode = g.DesyncMode,
-            SplitPos = g.SplitPos,
-            SplitPosSemantic = g.SplitPosSemantic,
-            FakeTtl = g.FakeTtl,
-            AutoTtl = g.AutoTtl,
-            FakeTlsMod = g.FakeTlsMod,
-            Hostlist = g.Hostlist,
-            RepeatCount = g.RepeatCount,
-            ExtraArgs = [.. g.ExtraArgs],
-            DisplayName = g.DisplayName,
-            BatFileName = g.BatFileName,
-            SourceBatPath = g.SourceBatPath,
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
+        g.DesyncMode = "split";
+        g.AutoTtl = false;
+
+        if (g.FakeTtl is < 1 or > 128)
+            g.FakeTtl = null;
     }
 }

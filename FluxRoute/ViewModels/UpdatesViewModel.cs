@@ -10,14 +10,11 @@ using FluxRoute.Views;
 
 namespace FluxRoute.ViewModels;
 
-/// <summary>
-/// Feature ViewModel для вкладки "Обновление".
-/// Изолирует логику проверки/установки обновлений от MainViewModel.
-/// </summary>
 public sealed partial class UpdatesViewModel : ObservableObject
 {
     private readonly IUpdaterService _updater;
     private readonly IAppUpdaterService _appUpdater;
+    private readonly IByeDpiUpdaterService _byeDpiUpdater;
     private readonly Func<string> _getEngineDir;
     private readonly Func<bool> _getAutoUpdateEnabled;
     private readonly Func<string> _getCurrentEngineVersion;
@@ -48,9 +45,17 @@ public sealed partial class UpdatesViewModel : ObservableObject
     [ObservableProperty] private bool isCheckingAppUpdate;
     [ObservableProperty] private bool hasAppUpdate;
 
+    // ── ByeDPI ────────────────────────────────────────────────────────────
+    [ObservableProperty] private string byeDpiVersion = "—";
+    [ObservableProperty] private string byeDpiLatestVersion = "—";
+    [ObservableProperty] private string byeDpiUpdateStatus = "Не проверялось";
+    [ObservableProperty] private bool isByeDpiUpdating;
+    private UpdateInfo? _pendingByeDpiUpdate;
+
     public UpdatesViewModel(
         IUpdaterService updater,
         IAppUpdaterService appUpdater,
+        IByeDpiUpdaterService byeDpiUpdater,
         Func<string> getEngineDir,
         Func<bool> getAutoUpdateEnabled,
         Func<string> getCurrentEngineVersion,
@@ -63,6 +68,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
     {
         _updater = updater;
         _appUpdater = appUpdater;
+        _byeDpiUpdater = byeDpiUpdater;
         _getEngineDir = getEngineDir;
         _getAutoUpdateEnabled = getAutoUpdateEnabled;
         _getCurrentEngineVersion = getCurrentEngineVersion;
@@ -74,15 +80,22 @@ public sealed partial class UpdatesViewModel : ObservableObject
         _addRecentLog = addRecentLog;
 
         CurrentAppVersion = _appUpdater.GetCurrentVersion();
+        RefreshByeDpiVersion();
     }
 
     private string EngineDir => _getEngineDir();
+    private string ByeDpiDir => Path.Combine(EngineDir, "byedpi");
 
     private void AddLog(string message)
     {
         UpdateLogs.Add(message);
         while (UpdateLogs.Count > 200)
             UpdateLogs.RemoveAt(0);
+    }
+
+    private void RefreshByeDpiVersion()
+    {
+        ByeDpiVersion = _byeDpiUpdater.GetLocalVersion(ByeDpiDir);
     }
 
     public async Task CheckOnStartupAsync()
@@ -114,7 +127,6 @@ public sealed partial class UpdatesViewModel : ObservableObject
         UpdateStatus = "🔍 Проверяем обновления...";
         LatestRemoteVersion = "…";
 
-        // Сначала получаем последнюю версию независимо, чтобы показать её в UI
         var (latest, latestError) = await _updater.GetLatestReleaseAsync();
         if (latest is not null)
         {
@@ -299,6 +311,75 @@ public sealed partial class UpdatesViewModel : ObservableObject
             AppUpdateStatus = $"❌ {error}";
             AddLog($"❌ {error}");
         }
+    }
+
+    // ── ByeDPI ──────────────────────────────────────────────────────────
+
+    [RelayCommand]
+    private async Task CheckByeDpiUpdate()
+    {
+        ByeDpiUpdateStatus = "🔍 Проверка ByeDPI...";
+
+        var (latest, error) = await _byeDpiUpdater.GetLatestReleaseAsync();
+        if (latest is not null)
+            ByeDpiLatestVersion = latest.Version;
+        else
+            ByeDpiLatestVersion = "—";
+
+        var (update, checkError) = await _byeDpiUpdater.CheckForUpdateAsync(ByeDpiDir);
+
+        if (update is null)
+        {
+            if (checkError is not null)
+            {
+                ByeDpiUpdateStatus = $"❌ {checkError}";
+                AddLog($"❌ ByeDPI: {checkError}");
+            }
+            else
+            {
+                ByeDpiUpdateStatus = $"✅ Актуальная версия ({ByeDpiVersion})";
+                AddLog("✅ ByeDPI: обновлений нет");
+            }
+            return;
+        }
+
+        _pendingByeDpiUpdate = update;
+        ByeDpiUpdateStatus = $"⬆️ Доступна версия {update.Version}";
+        AddLog($"⬆️ ByeDPI: {update.Version}");
+    }
+
+    [RelayCommand]
+    private async Task InstallByeDpiUpdate()
+    {
+        if (_pendingByeDpiUpdate is null)
+        {
+            await CheckByeDpiUpdate();
+            if (_pendingByeDpiUpdate is null) return;
+        }
+
+        IsByeDpiUpdating = true;
+        var success = await _byeDpiUpdater.InstallUpdateAsync(ByeDpiDir, _pendingByeDpiUpdate,
+            msg =>
+            {
+                if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        ByeDpiUpdateStatus = msg;
+                        AddLog(msg);
+                        _addAppLog(msg);
+                    });
+                }
+            });
+
+        if (success)
+        {
+            RefreshByeDpiVersion();
+            _pendingByeDpiUpdate = null;
+            ByeDpiUpdateStatus = $"✅ ByeDPI {ByeDpiVersion}";
+        }
+
+        IsByeDpiUpdating = false;
     }
 
     public async Task AutoDownloadEngineAsync()

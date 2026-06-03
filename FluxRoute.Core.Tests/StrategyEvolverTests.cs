@@ -18,7 +18,7 @@ public sealed class StrategyEvolverTests
         var reg = new AiStrategyRegistry(regPath);
         reg.Load();
         var hist = new AiHistoryStore(histPath);
-        var mat = new BatMaterializer();
+        var mat = new BatMaterializer(() => root);
 
         var g1 = new StrategyGenome { DisplayName = "p1", DesyncMode = "split", FilterTcp = "80", SplitPosSemantic = "host" };
         var g2 = new StrategyGenome { DisplayName = "p2", DesyncMode = "fake", FilterTcp = "443", FakeTlsMod = "rand" };
@@ -51,7 +51,6 @@ public sealed class StrategyEvolverTests
         var evolver = new StrategyEvolver(
             reg,
             hist,
-            mat,
             () => root,
             () => new AiSettings { MaxEvolvedStrategies = 24 },
             new Random(777));

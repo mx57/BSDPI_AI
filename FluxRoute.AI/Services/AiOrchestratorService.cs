@@ -23,9 +23,10 @@ public sealed class AiOrchestratorService : IDisposable
     private readonly Func<string> _engineDir;
     private readonly Func<AiSettings> _aiSettings;
     private readonly Func<Task> _refreshProfiles;
-    private readonly Func<bool> _isWinwsRunning;
+    private readonly Func<bool> _isAnyEngineRunning;
     private readonly Func<Task> _ensureProtectionRunning;
     private readonly IConnectivityChecker _connectivity;
+    private readonly DpiEngineManager _engineManager;
     private readonly ProfileProbeService _probeService;
     private readonly NetworkFingerprintProvider _fingerprints;
     private readonly NetworkChangeWatcher _networkWatcher;
@@ -33,7 +34,6 @@ public sealed class AiOrchestratorService : IDisposable
     private readonly AiHistoryStore _history;
     private readonly BanditSelector _bandit;
     private readonly StrategyEvolver _evolver;
-    private readonly BatMaterializer _materializer;
 
     private CancellationTokenSource? _cts;
     private int _consecutiveFailures;
@@ -53,16 +53,16 @@ public sealed class AiOrchestratorService : IDisposable
         Func<string> engineDir,
         Func<AiSettings> aiSettings,
         Func<Task> refreshProfiles,
-        Func<bool> isWinwsRunning,
+        Func<bool> isAnyEngineRunning,
         Func<Task> ensureProtectionRunning,
         IConnectivityChecker connectivity,
+        DpiEngineManager engineManager,
         NetworkFingerprintProvider fingerprints,
         NetworkChangeWatcher networkWatcher,
         AiStrategyRegistry registry,
         AiHistoryStore history,
         BanditSelector bandit,
-        StrategyEvolver evolver,
-        BatMaterializer materializer)
+        StrategyEvolver evolver)
     {
         _getProfiles = getProfiles;
         _getActiveProfile = getActiveProfile;
@@ -72,16 +72,16 @@ public sealed class AiOrchestratorService : IDisposable
         _engineDir = engineDir;
         _aiSettings = aiSettings;
         _refreshProfiles = refreshProfiles;
-        _isWinwsRunning = isWinwsRunning;
+        _isAnyEngineRunning = isAnyEngineRunning;
         _ensureProtectionRunning = ensureProtectionRunning;
         _connectivity = connectivity;
+        _engineManager = engineManager;
         _fingerprints = fingerprints;
         _networkWatcher = networkWatcher;
         _registry = registry;
         _history = history;
         _bandit = bandit;
         _evolver = evolver;
-        _materializer = materializer;
         _probeService = new ProfileProbeService(_connectivity, _switchProfile);
     }
 
@@ -115,7 +115,7 @@ public sealed class AiOrchestratorService : IDisposable
     {
         var previousGenome = _currentGenome;
         var previousProfile = _getActiveProfile();
-        var wasRunning = _isWinwsRunning();
+        var wasRunning = _isAnyEngineRunning();
         try
         {
             await _refreshProfiles().ConfigureAwait(false);
@@ -260,8 +260,9 @@ public sealed class AiOrchestratorService : IDisposable
         var avgLat = result.Checks.Where(x => x.ElapsedMs.HasValue).Select(x => x.ElapsedMs!.Value).DefaultIfEmpty(0)
             .Average();
 
+        var engineName = _currentGenome.EngineType == DpiEngineType.ByeDpi ? "byedpi" : "zapret";
         var failureSig = !result.ProcessStable
-            ? "winws_failed"
+            ? $"{engineName}_failed"
             : result.Score < (int)Math.Round(FailThreshold * 100)
                 ? "network_failed"
                 : null;
@@ -307,8 +308,7 @@ public sealed class AiOrchestratorService : IDisposable
 
         if (_consecutiveFailures < RequiredFailuresBeforeSwitch)
         {
-            Notify(
-                $"ИИ: повтор перед сменой {_consecutiveFailures}/{RequiredFailuresBeforeSwitch}.");
+            Notify($"ИИ: повтор перед сменой {_consecutiveFailures}/{RequiredFailuresBeforeSwitch}.");
             return;
         }
 
@@ -353,22 +353,38 @@ public sealed class AiOrchestratorService : IDisposable
         bool switched = false)
     {
         await _refreshProfiles().ConfigureAwait(false);
-        var profile = ResolveProfile(g);
-        if (profile is null)
+
+        var engineDir = _engineDir();
+        var profile = g.ToEngineProfile();
+
+        var runMode = _aiSettings().UseHybridMode ? DpiRunMode.Hybrid : DpiRunMode.Standalone;
+        _engineManager.SetRunMode(runMode);
+
+        var started = await _engineManager.ApplyProfileAsync(profile, ct).ConfigureAwait(false);
+        if (!started)
         {
-            Notify($"ИИ: не удалось материализовать профиль для «{g.DisplayName}».");
+            Notify($"ИИ: не удалось запустить движок для «{g.DisplayName}».");
             return;
         }
 
         _currentGenome = g;
         Notify(
             switched
-                ? $"ИИ: переключение на «{g.DisplayName}» ({fp.Label})."
-                : $"ИИ: запуск «{g.DisplayName}» ({fp.Label}).",
+                ? $"ИИ: переключение на «{g.DisplayName}» ({g.EngineType}) ({fp.Label})."
+                : $"ИИ: запуск «{g.DisplayName}» ({g.EngineType}) ({fp.Label}).",
             switched: switched,
             newProfile: g.DisplayName);
 
-        await _switchProfile(profile).ConfigureAwait(false);
+        if (_switchProfile is not null)
+        {
+            var pi = new ProfileItem
+            {
+                FileName = $"{g.DisplayName}.bat",
+                DisplayName = g.DisplayName,
+                FullPath = Path.Combine(engineDir, "ai-evolved", $"{g.DisplayName}.bat"),
+            };
+            await _switchProfile(pi).ConfigureAwait(false);
+        }
     }
 
     private async Task MaybeEvolveAsync(NetworkFingerprint fp, CancellationToken ct)
@@ -410,45 +426,6 @@ public sealed class AiOrchestratorService : IDisposable
             Notify("ИИ: эволюция не создала новую стратегию (мало активных родителей или дубликат).");
     }
 
-    private ProfileItem? ResolveProfile(StrategyGenome g)
-    {
-        var engineDir = _engineDir();
-
-        string? path = null;
-        if (!string.IsNullOrEmpty(g.SourceBatPath) && File.Exists(g.SourceBatPath))
-            path = g.SourceBatPath;
-        else if (!string.IsNullOrEmpty(g.BatFileName))
-        {
-            path = Path.Combine(engineDir, "ai-evolved", g.BatFileName);
-            if (!File.Exists(path))
-            {
-                path = _materializer.WriteBat(g, engineDir);
-                g.SourceBatPath = path;
-                g.BatFileName = Path.GetFileName(path);
-                _registry.Upsert(g);
-                _registry.Save();
-            }
-        }
-        else if (g.Origin == StrategyOrigin.Evolved)
-        {
-            path = _materializer.WriteBat(g, engineDir);
-            g.SourceBatPath = path;
-            g.BatFileName = Path.GetFileName(path);
-            _registry.Upsert(g);
-            _registry.Save();
-        }
-
-        if (path is null || !File.Exists(path))
-            return null;
-
-        return new ProfileItem
-        {
-            FileName = Path.GetFileName(path),
-            DisplayName = g.DisplayName,
-            FullPath = path,
-        };
-    }
-
     private List<StrategyGenome> GenePool() =>
         _registry.GetActiveGenomes().ToList();
 
@@ -456,7 +433,7 @@ public sealed class AiOrchestratorService : IDisposable
     {
         var previousGenome = _currentGenome;
         var previousProfile = _getActiveProfile();
-        var wasRunning = _isWinwsRunning();
+        var wasRunning = _isAnyEngineRunning();
         try
         {
             await _refreshProfiles().ConfigureAwait(false);
@@ -476,12 +453,25 @@ public sealed class AiOrchestratorService : IDisposable
     private async Task TryProbeAndPersistGenomeAsync(StrategyGenome g, NetworkFingerprint fp, CancellationToken ct,
         bool isFreshlyEvolved)
     {
-        var testProfile = ResolveProfile(g);
-        if (testProfile is null)
+        var engineDir = _engineDir();
+        var profile = g.ToEngineProfile();
+
+        var runMode = _aiSettings().UseHybridMode ? DpiRunMode.Hybrid : DpiRunMode.Standalone;
+        _engineManager.SetRunMode(runMode);
+
+        var started = await _engineManager.ApplyProfileAsync(profile, ct).ConfigureAwait(false);
+        if (!started)
         {
-            Notify($"ИИ: не удалось проверить «{g.DisplayName}».");
+            Notify($"ИИ: не удалось запустить движок для проверки «{g.DisplayName}».");
             return;
         }
+
+        var testProfile = new ProfileItem
+        {
+            FileName = $"{g.DisplayName}.bat",
+            DisplayName = g.DisplayName,
+            FullPath = Path.Combine(engineDir, "ai-evolved", $"{g.DisplayName}.bat"),
+        };
 
         Notify(isFreshlyEvolved
             ? $"ИИ: проверка новой стратегии «{g.DisplayName}»..."
@@ -494,14 +484,32 @@ public sealed class AiOrchestratorService : IDisposable
             ProcessWaitTimeout = TimeSpan.FromSeconds(8),
             StopAfterProbe = false,
         };
+
+        var socksPort = g.EngineType == DpiEngineType.ByeDpi ? g.ToEngineProfile().SocksPort : (int?)null;
+        if (socksPort is not null)
+        {
+            probeOptions = new ProfileProbeOptions
+            {
+                StartupWait = probeOptions.StartupWait,
+                StableWait = probeOptions.StableWait,
+                ProcessWaitTimeout = probeOptions.ProcessWaitTimeout,
+                StopAfterProbe = probeOptions.StopAfterProbe,
+                RequireWinwsProcess = probeOptions.RequireWinwsProcess,
+                UseCurlForHttp = probeOptions.UseCurlForHttp,
+                MaxParallelChecks = probeOptions.MaxParallelChecks,
+                Socks5Endpoint = $"127.0.0.1:{socksPort}",
+                ProcessName = "ciadpi",
+            };
+        }
         var result = await _probeService.ProbeAsync(testProfile, targets, probeOptions, ct).ConfigureAwait(false);
 
         var failedKeys = result.FailedChecks.Select(x => x.Key).ToList();
         var avgLat = result.Checks.Where(x => x.ElapsedMs.HasValue).Select(x => x.ElapsedMs!.Value).DefaultIfEmpty(0)
             .Average();
 
+        var engineName = g.EngineType == DpiEngineType.ByeDpi ? "byedpi" : "zapret";
         var failureSig = !result.ProcessStable
-            ? "winws_failed"
+            ? $"{engineName}_failed"
             : result.Score < (int)Math.Round(FailThreshold * 100)
                 ? "network_failed"
                 : null;
@@ -540,8 +548,6 @@ public sealed class AiOrchestratorService : IDisposable
                 result: result);
         }
 
-        await _notifyScoreUpdate(testProfile.FileName, result.Score).ConfigureAwait(false);
-
         g.LastVerificationScore = result.Score;
         g.LastVerifiedAt = DateTimeOffset.UtcNow;
         _registry.Upsert(g);
@@ -566,7 +572,7 @@ public sealed class AiOrchestratorService : IDisposable
                 continue;
 
             var name = Path.GetFileNameWithoutExtension(bat);
-            var genome = BatGenomeParser.FromLaunchPlan(plan, name, StrategyOrigin.Builtin);
+            var genome = GenomeParser.FromLaunchPlan(plan, name, StrategyOrigin.Builtin);
             genome.Id = StableGuid.FromString("builtin:" + Path.GetFullPath(bat));
             genome.SourceBatPath = bat;
             genome.BatFileName = fn;

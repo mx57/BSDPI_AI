@@ -8,4 +8,7 @@ public sealed class AiSettings
     public int EvolutionIntervalMinutes { get; set; } = 60;
     public int MinProbesBeforeEvolve { get; set; } = 6;
     public int KeepHistoryDays { get; set; } = 14;
+
+    public bool UseHybridMode { get; set; }
+    public int ByeDpiSocksPort { get; set; } = 1080;
 }
