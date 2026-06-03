@@ -44,7 +44,6 @@ public partial class App : Application
             {
                 Log.Warning("FluxRoute is running without administrator privileges.");
 
-                // Временно переключаем, чтобы закрытие диалога не завершило приложение.
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
                 var prompt = new AdminPromptWindow();
@@ -103,8 +102,6 @@ public partial class App : Application
 
     private static void ConfigureApplicationServices(IServiceCollection services)
     {
-        // Named HttpClient для апдейтера с Polly стандартной resilience-стратегией:
-        // retry (3 попытки с экспоненциальной задержкой) + circuit breaker + таймаут.
         services.AddHttpClient(FluxRoute.Updater.Services.HttpClientNames.Updater, client =>
         {
             client.Timeout = TimeSpan.FromSeconds(60);
@@ -112,7 +109,6 @@ public partial class App : Application
         })
         .AddStandardResilienceHandler();
 
-        // Named HttpClient для проверки связности (оркестратор).
         services.AddHttpClient(FluxRoute.Core.Services.HttpClientNames.Connectivity, client =>
         {
             client.Timeout = TimeSpan.FromSeconds(10);
@@ -125,8 +121,15 @@ public partial class App : Application
 
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IUpdaterService, UpdaterService>();
+        services.AddSingleton<IByeDpiUpdaterService, ByeDpiUpdaterService>();
         services.AddSingleton<IAppUpdaterService, AppUpdaterService>();
         services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
+
+        services.AddSingleton(sp =>
+        {
+            var engineDir = Path.Combine(AppContext.BaseDirectory, "engine");
+            return new DpiEngineManager(engineDir);
+        });
 
         services.AddSingleton<NetworkFingerprintProvider>();
         services.AddSingleton(sp =>
@@ -144,21 +147,43 @@ public partial class App : Application
             var dir = Path.GetDirectoryName(settingsService.SettingsPath)!;
             return new AiHistoryStore(Path.Combine(dir, "fluxroute-ai-history.jsonl"));
         });
-        services.AddSingleton<BatMaterializer>();
+
         services.AddSingleton(sp =>
             new BanditSelector(sp.GetRequiredService<AiStrategyRegistry>(), new Random()));
+
         services.AddSingleton(sp =>
-            new StrategyEvolver(
+        {
+            var engineDir = Path.Combine(AppContext.BaseDirectory, "engine");
+            return new StrategyEvolver(
                 sp.GetRequiredService<AiStrategyRegistry>(),
                 sp.GetRequiredService<AiHistoryStore>(),
-                sp.GetRequiredService<BatMaterializer>(),
-                () => Path.Combine(AppContext.BaseDirectory, "engine"),
-                () => sp.GetRequiredService<ISettingsService>().Load().Ai));
+                () => engineDir,
+                () => sp.GetRequiredService<ISettingsService>().Load().Ai);
+        });
+
+        services.AddSingleton(sp =>
+        {
+            var engineDir = Path.Combine(AppContext.BaseDirectory, "engine");
+            return new BatMaterializer(() => engineDir);
+        });
 
         services.AddSingleton(sp =>
             new NetworkChangeWatcher(sp.GetRequiredService<NetworkFingerprintProvider>()));
 
-        services.AddSingleton<MainViewModel>();
+        services.AddSingleton<MainViewModel>(sp => new MainViewModel(
+            sp.GetRequiredService<ISettingsService>(),
+            sp.GetRequiredService<IUpdaterService>(),
+            sp.GetRequiredService<IAppUpdaterService>(),
+            sp.GetRequiredService<IByeDpiUpdaterService>(),
+            sp.GetRequiredService<IConnectivityChecker>(),
+            sp.GetRequiredService<DpiEngineManager>(),
+            sp.GetRequiredService<NetworkFingerprintProvider>(),
+            sp.GetRequiredService<NetworkChangeWatcher>(),
+            sp.GetRequiredService<AiStrategyRegistry>(),
+            sp.GetRequiredService<AiHistoryStore>(),
+            sp.GetRequiredService<BanditSelector>(),
+            sp.GetRequiredService<StrategyEvolver>(),
+            sp.GetRequiredService<BatMaterializer>()));
         services.AddSingleton<TrayIconService>();
         services.AddSingleton<MainWindow>();
     }

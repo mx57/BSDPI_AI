@@ -29,7 +29,7 @@ public sealed class BatGenomeParserTests
     }
 
     [Fact]
-    public void RoundTrip_ViaMaterializer_PreservesSignature()
+    public void RoundTrip_ViaGenomeParser_PreservesSignature()
     {
         var tmp = Path.Combine(Path.GetTempPath(), "fr-ai-rt-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(tmp, "bin"));
@@ -45,13 +45,9 @@ public sealed class BatGenomeParserTests
         };
         var sig0 = GenomeSignature.Compute(g);
 
-        var mat = new BatMaterializer();
-        var built = mat.BuildBatContent(g, tmp);
-        Assert.Contains("winws.exe", built);
-
         var args = BatMaterializer.BuildWinwsArgs(g);
         var plan = new WinwsLaunchPlan(Path.Combine(tmp, "bin", "winws.exe"), args, tmp, null);
-        var g2 = BatGenomeParser.FromLaunchPlan(plan, "RT", StrategyOrigin.Builtin);
+        var g2 = GenomeParser.FromLaunchPlan(plan, "RT", StrategyOrigin.Builtin);
         Assert.Equal(sig0, GenomeSignature.Compute(g2));
     }
 }

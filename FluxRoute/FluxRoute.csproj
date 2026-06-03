@@ -7,8 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <Version>1.5.1</Version>
-    <ApplicationIcon>Resources\FluxRoute.ico</ApplicationIcon>
+    <Version>1.6.0</Version>
+    <ApplicationIcon>..\assets\FluxRoute.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,13 +19,10 @@
 
   <ItemGroup>
     <Compile Remove="Properties\**" />
-    <Compile Remove="ViewModels\Новая папка\**" />
+    <Compile Remove="Properties\**" />
     <EmbeddedResource Remove="Properties\**" />
-    <EmbeddedResource Remove="ViewModels\Новая папка\**" />
     <None Remove="Properties\**" />
-    <None Remove="ViewModels\Новая папка\**" />
     <Page Remove="Properties\**" />
-    <Page Remove="ViewModels\Новая папка\**" />
   </ItemGroup>
 
   <ItemGroup>

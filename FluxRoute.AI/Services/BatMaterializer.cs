@@ -1,15 +1,55 @@
 using System.Globalization;
 using System.Text;
 using FluxRoute.AI.Models;
+using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 
 namespace FluxRoute.AI.Services;
 
 public sealed class BatMaterializer
 {
-    public string BuildBatContent(StrategyGenome g, string engineDir)
+    private readonly Func<string> _engineDir;
+
+    public BatMaterializer(Func<string> engineDir)
     {
+        _engineDir = engineDir;
+    }
+
+    public string WriteProfile(StrategyGenome g)
+    {
+        var engineDir = _engineDir();
         ProfileBatLauncher.PrepareRuntime(engineDir);
+
+        if (g.EngineType == DpiEngineType.ByeDpi)
+            return WriteByeDpiBat(g, engineDir);
+
+        return WriteZapretBat(g, engineDir);
+    }
+
+    private string WriteByeDpiBat(StrategyGenome g, string engineDir)
+    {
+        var byedpiDir = Path.Combine(engineDir, "byedpi");
+        Directory.CreateDirectory(byedpiDir);
+
+        var args = ByeDpiEngine.BuildCliArgs(g.ToEngineProfile());
+        var argLine = string.Join(" ", args.Select(QuoteIfNeeded));
+
+        var sb = new StringBuilder();
+        sb.AppendLine("@echo off");
+        sb.AppendLine($"cd /d \"{byedpiDir}\"");
+        sb.AppendLine($"start /min \"\" ciadpi.exe {argLine}");
+        sb.AppendLine("exit");
+
+        var dir = Path.Combine(engineDir, "ai-evolved");
+        Directory.CreateDirectory(dir);
+        var safeName = SanitizeFileName(g.DisplayName);
+        var path = Path.Combine(dir, $"{safeName}.bat");
+        File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
+        return path;
+    }
+
+    private string WriteZapretBat(StrategyGenome g, string engineDir)
+    {
         var bin = Path.Combine(engineDir, "bin") + Path.DirectorySeparatorChar;
         var lists = Path.Combine(engineDir, "lists") + Path.DirectorySeparatorChar;
         var (gameFilter, gameTcp, gameUdp) = ReadGameFilter(engineDir);
@@ -25,16 +65,13 @@ public sealed class BatMaterializer
         sb.AppendLine($"set \"GameFilterTCP={gameTcp}\"");
         sb.AppendLine($"set \"GameFilterUDP={gameUdp}\"");
         sb.AppendLine($"\"%BIN%winws.exe\" {argLine}");
-        return sb.ToString();
-    }
+        sb.AppendLine("exit");
 
-    public string WriteBat(StrategyGenome g, string engineDir)
-    {
         var dir = Path.Combine(engineDir, "ai-evolved");
         Directory.CreateDirectory(dir);
         var safeName = SanitizeFileName(g.DisplayName);
         var path = Path.Combine(dir, $"{safeName}.bat");
-        File.WriteAllText(path, BuildBatContent(g, engineDir), new UTF8Encoding(false));
+        File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
         return path;
     }
 
@@ -42,20 +79,9 @@ public sealed class BatMaterializer
     {
         var list = new List<string>();
 
-        if (!string.IsNullOrWhiteSpace(g.FilterTcp))
-        {
-            list.Add("--filter-tcp");
-            list.Add(g.FilterTcp);
-        }
-
-        if (!string.IsNullOrWhiteSpace(g.FilterUdp))
-        {
-            list.Add("--filter-udp");
-            list.Add(g.FilterUdp);
-        }
-
-        list.Add("--dpi-desync");
-        list.Add(g.DesyncMode);
+        if (!string.IsNullOrWhiteSpace(g.FilterTcp)) { list.Add("--filter-tcp"); list.Add(g.FilterTcp); }
+        if (!string.IsNullOrWhiteSpace(g.FilterUdp)) { list.Add("--filter-udp"); list.Add(g.FilterUdp); }
+        list.Add("--dpi-desync"); list.Add(g.DesyncMode);
 
         if (g.SplitPosSemantic is not null)
         {

@@ -23,5 +23,9 @@ public sealed class ProfileProbeOptions
     /// <summary>Сколько целей проверять параллельно. Не ставь слишком много: каждый HTTP-тест запускает curl.exe.</summary>
     public int MaxParallelChecks { get; init; } = 6;
 
+    /// <summary>SOCKS5-прокси для проверок через ByeDPI (host:port). Если задан, HTTP-проверки идут через прокси.</summary>
+    public string? Socks5Endpoint { get; init; }
+
+    /// <summary>Имя проверяемого процесса (winws для zapret, ciadpi для ByeDPI).</summary>
     public string ProcessName { get; init; } = "winws";
 }

@@ -21,14 +21,160 @@ public interface IUpdaterService
     Task<bool> InstallUpdateAsync(string engineDir, UpdateInfo update, Action<string> onProgress, CancellationToken ct = default);
 }
 
+public interface IByeDpiUpdaterService
+{
+    string GetLocalVersion(string byedpiDir);
+    Task<(UpdateInfo? update, string? error)> CheckForUpdateAsync(string byedpiDir, CancellationToken ct = default);
+    Task<(UpdateInfo? update, string? error)> GetLatestReleaseAsync(CancellationToken ct = default);
+    Task<bool> InstallUpdateAsync(string byedpiDir, UpdateInfo update, Action<string> onProgress, CancellationToken ct = default);
+}
+
+public sealed partial class ByeDpiUpdaterService : IByeDpiUpdaterService
+{
+    private const string ApiUrl = "https://api.github.com/repos/hufrea/byedpi/releases/latest";
+    private const string VersionFile = "version.txt";
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public ByeDpiUpdaterService(IHttpClientFactory httpClientFactory)
+    {
+        _httpClientFactory = httpClientFactory;
+    }
+
+    public ByeDpiUpdaterService() : this(new FluxRoute.Core.Services.DefaultHttpClientFactory()) { }
+
+    public string GetLocalVersion(string byedpiDir)
+    {
+        var path = Path.Combine(byedpiDir, VersionFile);
+        if (File.Exists(path))
+        {
+            try { return File.ReadAllText(path).Trim(); }
+            catch { }
+        }
+        return "unknown";
+    }
+
+    private void SaveLocalVersion(string byedpiDir, string version)
+    {
+        var path = Path.Combine(byedpiDir, VersionFile);
+        File.WriteAllText(path, version.TrimStart('v', 'V'));
+    }
+
+    public async Task<(UpdateInfo? update, string? error)> GetLatestReleaseAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
+            http.DefaultRequestHeaders.Remove("User-Agent");
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-ByeDpi-Updater");
+
+            var json = await http.GetStringAsync(ApiUrl, ct).ConfigureAwait(false);
+
+            var tagMatch = Regex.Match(json, @"""tag_name""\s*:\s*""([^""]+)""");
+            var urlMatch = Regex.Match(json, @"""browser_download_url""\s*:\s*""([^""]+ciadpi[^""]*(?:exe|zip|7z))""", RegexOptions.IgnoreCase);
+            var bodyMatch = Regex.Match(json, @"""body""\s*:\s*""([^""]*)""");
+
+            if (!tagMatch.Success)
+                return (null, "Не удалось найти tag_name в ответе GitHub API");
+
+            var version = tagMatch.Groups[1].Value.TrimStart('v', 'V');
+            var downloadUrl = urlMatch.Success ? urlMatch.Groups[1].Value : "";
+            var notes = bodyMatch.Success ? bodyMatch.Groups[1].Value : "";
+
+            return (new UpdateInfo
+            {
+                Version = version,
+                DownloadUrl = downloadUrl,
+                ReleaseNotes = notes
+            }, null);
+        }
+        catch (HttpRequestException ex) { return (null, $"Ошибка сети: {ex.Message}"); }
+        catch (TaskCanceledException) { return (null, "Таймаут запроса"); }
+        catch (Exception ex) { return (null, $"Ошибка: {ex.Message}"); }
+    }
+
+    public async Task<(UpdateInfo? update, string? error)> CheckForUpdateAsync(string byedpiDir, CancellationToken ct = default)
+    {
+        var (release, error) = await GetLatestReleaseAsync(ct).ConfigureAwait(false);
+        if (release is null) return (null, error);
+
+        var local = GetLocalVersion(byedpiDir);
+        if (local == release.Version)
+            return (null, null);
+
+        return (release, null);
+    }
+
+    public async Task<bool> InstallUpdateAsync(string byedpiDir, UpdateInfo update, Action<string> onProgress, CancellationToken ct = default)
+    {
+        var tempZip = Path.Combine(Path.GetTempPath(), "byedpi_update.zip");
+        var tempExtract = Path.Combine(Path.GetTempPath(), "byedpi_update_extract");
+
+        try
+        {
+            onProgress($"⬇️ Скачиваем ByeDPI {update.Version}...");
+
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
+            http.DefaultRequestHeaders.Remove("User-Agent");
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-ByeDpi-Updater");
+
+            // Если DownloadUrl не найден через API, собираем вручную
+            var url = string.IsNullOrEmpty(update.DownloadUrl)
+                ? $"https://github.com/hufrea/byedpi/releases/download/v{update.Version}/ciadpi-x86_64-w64-mingw32.exe"
+                : update.DownloadUrl;
+
+            var bytes = await http.GetByteArrayAsync(url, ct).ConfigureAwait(false);
+
+            if (url.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
+                url.EndsWith(".7z", StringComparison.OrdinalIgnoreCase))
+            {
+                await File.WriteAllBytesAsync(tempZip, bytes, ct).ConfigureAwait(false);
+                if (Directory.Exists(tempExtract))
+                    Directory.Delete(tempExtract, recursive: true);
+                ZipFile.ExtractToDirectory(tempZip, tempExtract);
+
+                var exeFile = Directory.EnumerateFiles(tempExtract, "ciadpi*.exe", SearchOption.AllDirectories).FirstOrDefault();
+                if (exeFile is null)
+                {
+                    onProgress("❌ ciadpi.exe не найден в архиве");
+                    return false;
+                }
+
+                Directory.CreateDirectory(byedpiDir);
+                File.Copy(exeFile, Path.Combine(byedpiDir, "ciadpi.exe"), overwrite: true);
+            }
+            else
+            {
+                Directory.CreateDirectory(byedpiDir);
+                await File.WriteAllBytesAsync(Path.Combine(byedpiDir, "ciadpi.exe"), bytes, ct).ConfigureAwait(false);
+            }
+
+            SaveLocalVersion(byedpiDir, update.Version);
+            onProgress($"✅ ByeDPI {update.Version} установлен!");
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            onProgress("⚠️ Обновление ByeDPI отменено.");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            onProgress($"❌ Ошибка: {ex.Message}");
+            return false;
+        }
+        finally
+        {
+            try { File.Delete(tempZip); } catch { }
+            try { Directory.Delete(tempExtract, recursive: true); } catch { }
+        }
+    }
+}
+
 public sealed partial class UpdaterService : IUpdaterService
 {
-    // Flowseal хранит актуальную версию здесь — raw-файл, НЕ GitHub REST API (без лимита 60/час)
     private const string RemoteVersionUrl =
         "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/main/.service/version.txt";
 
-    // Шаблон ссылки на ZIP-архив релиза (скачивание release asset — тоже без API лимита)
-    // Тег и имя файла у Flowseal БЕЗ префикса 'v': /download/1.9.7b/zapret-discord-youtube-1.9.7b.zip
     private const string ZipUrlTemplate =
         "https://github.com/Flowseal/zapret-discord-youtube/releases/download/{0}/zapret-discord-youtube-{0}.zip";
 
@@ -43,26 +189,16 @@ public sealed partial class UpdaterService : IUpdaterService
         _httpClientFactory = httpClientFactory;
     }
 
-    /// <summary>
-    /// Fallback-конструктор для WPF designer и юнит-тестов.
-    /// Создаёт минимальную фабрику напрямую.
-    /// </summary>
     public UpdaterService() : this(new DefaultHttpClientFactory()) { }
 
     [GeneratedRegex(@"^set\s+""?LOCAL_VERSION=([^""]+)""?", RegexOptions.IgnoreCase)]
     private static partial Regex LocalVersionRegex();
 
-    /// <summary>Нормализует версию: убирает префикс 'v', пробелы, приводит к lower</summary>
     private static string NormalizeVersion(string version)
         => version.Trim().TrimStart('v', 'V').Trim().ToLowerInvariant();
 
-    /// <summary>
-    /// Читает текущую версию — сначала version.txt (записывается нашим апдейтером),
-    /// затем LOCAL_VERSION из service.bat как fallback (для первого запуска без обновлений)
-    /// </summary>
     public string GetLocalVersion(string engineDir)
     {
-        // Приоритет: version.txt — мы сами его пишем после успешного обновления
         var versionPath = Path.Combine(engineDir, VersionFile);
         if (File.Exists(versionPath))
         {
@@ -72,10 +208,9 @@ public sealed partial class UpdaterService : IUpdaterService
                 if (ver.Length > 0 && ver != "unknown")
                     return ver;
             }
-            catch { /* fallback ниже */ }
+            catch { }
         }
 
-        // Fallback: LOCAL_VERSION из service.bat (до первого обновления через FluxRoute)
         var serviceBat = Path.Combine(engineDir, "service.bat");
         if (File.Exists(serviceBat))
         {
@@ -88,22 +223,17 @@ public sealed partial class UpdaterService : IUpdaterService
                         return NormalizeVersion(match.Groups[1].Value);
                 }
             }
-            catch { /* fallback ниже */ }
+            catch { }
         }
 
         return "unknown";
     }
 
-    /// <summary>Сохраняет версию в engine/version.txt</summary>
     private void SaveLocalVersion(string engineDir, string version)
     {
         File.WriteAllText(Path.Combine(engineDir, VersionFile), NormalizeVersion(version));
     }
 
-    /// <summary>
-    /// Проверяет обновление через raw.githubusercontent.com — без API лимитов.
-    /// Читает .service/version.txt из репозитория Flowseal.
-    /// </summary>
     public async Task<(UpdateInfo? update, string? error)> CheckForUpdateAsync(string engineDir, CancellationToken ct = default)
     {
         var (release, error) = await GetLatestReleaseAsync(ct);
@@ -115,16 +245,10 @@ public sealed partial class UpdaterService : IUpdaterService
         return (release, null);
     }
 
-    /// <summary>
-    /// Получает информацию о последнем релизе Flowseal.
-    /// Версия — из raw.githubusercontent.com/.service/version.txt (без лимита).
-    /// ZIP-ссылка — по шаблону (скачивание release asset, тоже без лимита).
-    /// </summary>
     public async Task<(UpdateInfo? update, string? error)> GetLatestReleaseAsync(CancellationToken ct = default)
     {
         try
         {
-            // Один GET к статическому файлу — не тратит API rate limit
             using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
             var raw = await http.GetStringAsync(RemoteVersionUrl, ct);
             var remoteVersion = raw.Trim();
@@ -141,21 +265,11 @@ public sealed partial class UpdaterService : IUpdaterService
                 ReleaseNotes = ""
             }, null);
         }
-        catch (HttpRequestException ex)
-        {
-            return (null, $"Ошибка сети: {ex.Message}");
-        }
-        catch (TaskCanceledException)
-        {
-            return (null, "Таймаут запроса");
-        }
-        catch (Exception ex)
-        {
-            return (null, $"Ошибка: {ex.Message}");
-        }
+        catch (HttpRequestException ex) { return (null, $"Ошибка сети: {ex.Message}"); }
+        catch (TaskCanceledException) { return (null, "Таймаут запроса"); }
+        catch (Exception ex) { return (null, $"Ошибка: {ex.Message}"); }
     }
 
-    /// <summary>Скачивает и устанавливает обновление c полным staging → backup → rollback.</summary>
     public async Task<bool> InstallUpdateAsync(
         string engineDir,
         UpdateInfo update,
@@ -169,7 +283,6 @@ public sealed partial class UpdaterService : IUpdaterService
 
         try
         {
-            // ── Шаг 1: Скачиваем ──────────────────────────────────────────────────
             onProgress($"📥 Источник: {update.DownloadUrl}");
             onProgress("⬇️ Скачиваем обновление...");
 
@@ -181,7 +294,6 @@ public sealed partial class UpdaterService : IUpdaterService
 
             await File.WriteAllBytesAsync(tempZip, bytes, ct).ConfigureAwait(false);
 
-            // ── Шаг 2: Распаковываем в staging ────────────────────────────────────
             onProgress("📦 Распаковываем в staging-директорию...");
             if (Directory.Exists(stagingDir))
                 Directory.Delete(stagingDir, recursive: true);
@@ -198,18 +310,14 @@ public sealed partial class UpdaterService : IUpdaterService
                 return false;
             }
 
-            // Копируем в staging (не трогаем engine/ пока всё не готово)
             CopyDirectoryToStaging(extractedRoot, stagingDir);
             onProgress($"✅ Staging подготовлен: {CountFiles(stagingDir)} файлов");
 
-            // ── Шаг 3: Верифицируем манифест staging ──────────────────────────────
             if (!VerifyStaging(stagingDir, onProgress))
                 return false;
 
-            // ── Шаг 4: Останавливаем zapret ───────────────────────────────────────
             StopZapretService(onProgress);
 
-            // ── Шаг 5: Backup текущего engine/ ────────────────────────────────────
             onProgress("💾 Создаём резервную копию engine/...");
             if (Directory.Exists(backupDir))
                 Directory.Delete(backupDir, recursive: true);
@@ -217,7 +325,6 @@ public sealed partial class UpdaterService : IUpdaterService
                 CopyDirectoryToStaging(engineDir, backupDir, skipNames: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { StagingDirName, BackupDirName });
             onProgress($"💾 Резервная копия создана: {CountFiles(backupDir)} файлов");
 
-            // ── Шаг 6: Применяем staging → engine/ ────────────────────────────────
             onProgress("🔄 Применяем обновление...");
             var failedFiles = ApplyStaging(stagingDir, engineDir, onProgress);
 
@@ -229,11 +336,9 @@ public sealed partial class UpdaterService : IUpdaterService
                 return false;
             }
 
-            // ── Шаг 7: Фиксируем версию ───────────────────────────────────────────
             SaveLocalVersion(engineDir, update.Version);
             onProgress($"✅ Обновление {NormalizeVersion(update.Version)} установлено!");
 
-            // Чистим staging и backup после успешного обновления
             TryDeleteDir(stagingDir);
             TryDeleteDir(backupDir);
 
@@ -256,7 +361,6 @@ public sealed partial class UpdaterService : IUpdaterService
         }
     }
 
-    /// <summary>Останавливаем службу zapret и убиваем winws.exe</summary>
     private static void StopZapretService(Action<string> onProgress)
     {
         try
@@ -288,7 +392,6 @@ public sealed partial class UpdaterService : IUpdaterService
         }
         catch { }
 
-        // Убиваем winws.exe на случай если остался
         try
         {
             using var kill = new System.Diagnostics.Process();
@@ -303,20 +406,16 @@ public sealed partial class UpdaterService : IUpdaterService
         }
         catch { }
 
-        // Даём время на освобождение файлов
         Thread.Sleep(1500);
     }
 
-    /// <summary>Ищет папку с BAT файлами внутри распакованного архива (до 2 уровней)</summary>
     private static string? FindEngineRoot(string extractRoot)
     {
-        // Проверяем первый уровень вложенности
         foreach (var dir in Directory.EnumerateDirectories(extractRoot))
         {
             if (Directory.GetFiles(dir, "*.bat").Length > 0)
                 return dir;
 
-            // Проверяем второй уровень (для вложенных архивов)
             foreach (var subDir in Directory.EnumerateDirectories(dir))
             {
                 if (Directory.GetFiles(subDir, "*.bat").Length > 0)
@@ -324,16 +423,12 @@ public sealed partial class UpdaterService : IUpdaterService
             }
         }
 
-        // Или сразу в корне
         if (Directory.GetFiles(extractRoot, "*.bat").Length > 0)
             return extractRoot;
 
         return null;
     }
 
-    // ── Вспомогательные методы ────────────────────────────────────────────────
-
-    /// <summary>Проверяем что staging содержит минимально необходимые файлы запуска.</summary>
     private static bool VerifyStaging(string stagingDir, Action<string> onProgress)
     {
         var batFiles = Directory.GetFiles(stagingDir, "*.bat", SearchOption.AllDirectories);
@@ -347,10 +442,6 @@ public sealed partial class UpdaterService : IUpdaterService
         return true;
     }
 
-    /// <summary>
-    /// Копирует содержимое source в dest для staging и backup.
-    /// Пользовательские файлы не копируются в staging, но сохраняются при backup.
-    /// </summary>
     private static void CopyDirectoryToStaging(string source, string dest, HashSet<string>? skipNames = null)
     {
         Directory.CreateDirectory(dest);
@@ -369,10 +460,6 @@ public sealed partial class UpdaterService : IUpdaterService
         }
     }
 
-    /// <summary>
-    /// Применяет staging → engine/. Пропускает пользовательские файлы.
-    /// Возвращает список относительных путей файлов, которые не удалось записать.
-    /// </summary>
     private static List<string> ApplyStaging(string stagingDir, string engineDir, Action<string> onProgress)
     {
         var failedFiles = new List<string>();
@@ -393,7 +480,6 @@ public sealed partial class UpdaterService : IUpdaterService
             }
             catch (IOException)
             {
-                // Файл заблокирован — пробуем атомарную замену через временное имя
                 try
                 {
                     var tmp = destFile + ".upd";
@@ -413,7 +499,6 @@ public sealed partial class UpdaterService : IUpdaterService
         return failedFiles;
     }
 
-    /// <summary>Пытается откатить engine/ из backup. Возвращает true при полном успехе.</summary>
     private static bool TryRollback(string backupDir, string engineDir, Action<string> onProgress)
     {
         if (!Directory.Exists(backupDir))
@@ -460,7 +545,6 @@ public sealed partial class UpdaterService : IUpdaterService
         try { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); } catch { }
     }
 
-    /// <summary>Файлы которые НЕ перезаписываем при обновлении (пользовательские)</summary>
     private static bool IsUserFile(string fileName)
     {
         var userFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

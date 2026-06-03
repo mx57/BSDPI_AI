@@ -10,16 +10,32 @@ public static class GenomeSignature
     {
         var payload = new
         {
+            g.EngineType,
             g.FilterTcp,
             g.FilterUdp,
             g.DesyncMode,
             g.SplitPos,
             g.SplitPosSemantic,
+            g.DisorderPos,
+            g.FakePos,
+            g.OobPos,
+            g.DisoobPos,
+            g.TlsrecPos,
             g.FakeTtl,
             g.AutoTtl,
+            g.Md5sig,
             g.FakeTlsMod,
+            g.FakeSni,
+            g.FakeData,
+            g.ModHttp,
+            g.Tlsminor,
+            g.Hosts,
             g.Hostlist,
             g.RepeatCount,
+            g.CacheTtl,
+            g.Auto,
+            g.Timeout,
+            g.AutoMode,
             Extra = string.Join('\u001f', g.ExtraArgs),
         };
         var json = JsonSerializer.Serialize(payload);

@@ -102,11 +102,13 @@ public sealed class ProfileProbeService
             processIds = stableSnapshot.ProcessIds;
         }
 
-        var (successRate, checks) = await connectivity.CheckAllAsync(
-            targetList,
-            options.UseCurlForHttp,
-            options.MaxParallelChecks,
-            ct).ConfigureAwait(false);
+        var (successRate, checks) = options.Socks5Endpoint is not null
+            ? await CheckViaSocks5Async(connectivity, targetList, options.Socks5Endpoint, ct).ConfigureAwait(false)
+            : await connectivity.CheckAllAsync(
+                targetList,
+                options.UseCurlForHttp,
+                options.MaxParallelChecks,
+                ct).ConfigureAwait(false);
         var score = ProfileScoringService.Calculate(processStarted, processStable, checks, options.RequireWinwsProcess);
 
         sw.Stop();
@@ -123,6 +125,35 @@ public sealed class ProfileProbeService
             Duration = sw.Elapsed,
             Summary = BuildSummary(processStarted, processStable, checks)
         };
+    }
+
+    private static async Task<(double successRate, List<CheckResult> results)> CheckViaSocks5Async(
+        IConnectivityChecker connectivity,
+        List<TargetEntry> targets,
+        string socksEndpoint,
+        CancellationToken ct)
+    {
+        var parts = socksEndpoint.Split(':');
+        var host = parts[0];
+        var port = parts.Length > 1 && int.TryParse(parts[1], out var p) ? p : 1080;
+
+        using var throttler = new SemaphoreSlim(6, 6);
+        var tasks = targets.Select(async target =>
+        {
+            await throttler.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                return await connectivity.CheckViaSocks5Async(target, host, port, ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                throttler.Release();
+            }
+        });
+
+        var results = (await Task.WhenAll(tasks).ConfigureAwait(false)).ToList();
+        var rate = results.Count(r => r.Ok) / (double)results.Count;
+        return (rate, results);
     }
 
     private static string BuildSummary(bool processStarted, bool processStable, IReadOnlyList<CheckResult> checks)

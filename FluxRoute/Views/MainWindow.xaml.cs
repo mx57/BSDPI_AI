@@ -49,12 +49,10 @@ public partial class MainWindow : Window
     private bool _isClosingConfirmed;
     private WpfTextBox? _unifiedLogsTextBox;
     private WpfTextBlock? _pageTitleTextBlock;
-
-    // ── Wave pulse animation (Zapret-Hub style) ──
-    private readonly System.Windows.Threading.DispatcherTimer _idlePulseTimer = new()
-    {
-        Interval = TimeSpan.FromMilliseconds(1480)
-    };
+    private WpfBorder? _navIndicatorBorder;
+    private WpfBorder? _sidebarBorder;
+    private TranslateTransform? _navIndicatorTransform;
+    private WpfScrollViewer? _serviceLogScroll;
 
 
     // Parameterless constructor is intentionally kept for the WPF designer
@@ -71,19 +69,21 @@ public partial class MainWindow : Window
         var registry = new AiStrategyRegistry(Path.Combine(dir, "fluxroute-ai-strategies.json"));
         registry.Load();
         var history = new AiHistoryStore(Path.Combine(dir, "fluxroute-ai-history.jsonl"));
-        var materializer = new BatMaterializer();
+        var materializer = new BatMaterializer(() => dir);
         var fingerprints = new NetworkFingerprintProvider();
         return new MainViewModel(
             settings,
             new UpdaterService(),
             new AppUpdaterService(),
+            new ByeDpiUpdaterService(),
             new ConnectivityChecker(),
+            new DpiEngineManager(Path.Combine(AppContext.BaseDirectory, "engine")),
             fingerprints,
             new NetworkChangeWatcher(fingerprints),
             registry,
             history,
             new BanditSelector(registry, new Random()),
-            new StrategyEvolver(registry, history, materializer,
+            new StrategyEvolver(registry, history,
                 () => Path.Combine(AppContext.BaseDirectory, "engine"),
                 () => settings.Load().Ai),
             materializer);
@@ -95,6 +95,7 @@ public partial class MainWindow : Window
         ArgumentNullException.ThrowIfNull(trayIcon);
 
         InitializeComponent();
+        ResolveNamedElements();
 
         _vm = viewModel;
         _trayIcon = trayIcon;
@@ -230,9 +231,16 @@ public partial class MainWindow : Window
         _logger?.LogInformation("Main window cleanup completed.");
     }
 
+    private void ResolveNamedElements()
+    {
+        _sidebarBorder = FindName("SidebarBorder") as WpfBorder;
+        _navIndicatorTransform = FindName("NavIndicatorTransform") as TranslateTransform;
+        _serviceLogScroll = FindName("ServiceLogScroll") as WpfScrollViewer;
+    }
+
     private void ServiceLogs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        ServiceLogScroll?.ScrollToEnd();
+        _serviceLogScroll?.ScrollToEnd();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -272,10 +280,6 @@ public partial class MainWindow : Window
 
     private void AnimateNavIndicator(int tabIndex)
     {
-        // Tab 7 (About) is pinned to the bottom in a separate StackPanel (Margin.Top=416)
-        // Center Y = 416 (StackPanel) + 9 (separator) + 4 (Grid margin) + 18 (icon center) = 447
-        // Pill Margin.Top=20, Height=20 → Y = 447 - 10 - 20 = 417
-        double targetY;
         if (tabIndex == 7)
         {
             targetY = 417;
@@ -296,18 +300,27 @@ public partial class MainWindow : Window
             targetY = visualIndex * 44;
         }
 
+        SetNavIndicatorVisible(true);
+
+        var visualIndex = tabIndex == 8 ? 7 : tabIndex;
         var animation = new DoubleAnimation
         {
             To = targetY,
             Duration = TimeSpan.FromMilliseconds(280),
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
-        NavIndicatorTransform.BeginAnimation(TranslateTransform.YProperty, animation);
+        _navIndicatorTransform?.BeginAnimation(TranslateTransform.YProperty, animation);
     }
 
     private void AnimateSidebar(bool expanded)
     {
-        // No-op in v1.5.0: sidebar is fixed-width icon-only; no expand/collapse animation.
+        var anim = new DoubleAnimation
+        {
+            To = expanded ? 165 : 48,
+            Duration = TimeSpan.FromMilliseconds(200),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+        };
+        _sidebarBorder?.BeginAnimation(WidthProperty, anim);
     }
 
     // ── Wave pulse (Zapret-Hub style) ────────────────────────────────────────
@@ -447,8 +460,13 @@ public partial class MainWindow : Window
     {
         try
         {
-            // v1.5.0 redesign: nav buttons and logs page are fully declared in XAML.
-            // Only locate the existing UnifiedLogsTextBox; no tree injection needed.
+            AddLogsNavigationButton();
+            MoveAboutNavigationToBottom();
+
+            // В v15 вкладка логов уже материализована в XAML.
+            // Поэтому в нормальном сценарии используем существующую страницу,
+            // а не добавляем вторую поверх неё из code-behind. Иначе между
+            // прозрачными областями двух страниц могут просвечивать строки логов.
             var hasExistingLogsPage = TryUseExistingUnifiedLogsPage();
             if (!hasExistingLogsPage)
                 AddLogsPage();
@@ -495,7 +513,65 @@ public partial class MainWindow : Window
 
     private void MoveAboutNavigationToBottom()
     {
-        // No-op in v1.5.0: the About nav item is already placed at the bottom in XAML.
+        try
+        {
+            if (_sidebarBorder is null)
+                return;
+
+            if (_sidebarBorder.Child is WpfGrid { Tag: string tag } && tag == "SidebarWithBottomAbout")
+                return;
+
+            if (_sidebarBorder.Child is not WpfStackPanel originalSidebar)
+                return;
+
+            var navGrid = originalSidebar.Children.OfType<WpfGrid>().FirstOrDefault();
+            var navStack = navGrid?.Children.OfType<WpfStackPanel>()
+                .FirstOrDefault(sp => sp.Children.OfType<WpfButton>().Any(IsAboutNavButton));
+
+            if (navGrid is null || navStack is null)
+                return;
+
+            var aboutButton = navStack.Children.OfType<WpfButton>().FirstOrDefault(IsAboutNavButton);
+            if (aboutButton is null)
+                return;
+
+            navStack.Children.Remove(aboutButton);
+
+            // Remove spacer left by older patched builds, if it exists.
+            foreach (var spacer in navStack.Children.OfType<FrameworkElement>()
+                         .Where(e => Equals(e.Tag, "AboutNavSpacer"))
+                         .ToList())
+            {
+                navStack.Children.Remove(spacer);
+            }
+
+            _sidebarBorder.Child = null;
+
+            var sidebarLayout = new WpfGrid { Tag = "SidebarWithBottomAbout" };
+            sidebarLayout.RowDefinitions.Add(new WpfRowDefinition { Height = GridLength.Auto });
+            sidebarLayout.RowDefinitions.Add(new WpfRowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            sidebarLayout.RowDefinitions.Add(new WpfRowDefinition { Height = GridLength.Auto });
+
+            WpfGrid.SetRow(originalSidebar, 0);
+            sidebarLayout.Children.Add(originalSidebar);
+
+            var bottomContainer = new WpfBorder
+            {
+                BorderBrush = BrushFrom("#21262D"),
+                BorderThickness = new Thickness(0, 1, 0, 0),
+                Padding = new Thickness(0, 4, 0, 4),
+                Background = BrushFrom("#0D1117")
+            };
+            bottomContainer.Child = aboutButton;
+            WpfGrid.SetRow(bottomContainer, 2);
+            sidebarLayout.Children.Add(bottomContainer);
+
+            _sidebarBorder.Child = sidebarLayout;
+        }
+        catch (Exception ex)
+        {
+            _vm.Logs.Add($"[UI] Не удалось перенести пункт 'О программе' вниз: {ex.Message}");
+        }
     }
 
     private static bool IsAboutNavButton(WpfButton button)
@@ -537,13 +613,30 @@ public partial class MainWindow : Window
 
     private void SetNavIndicatorVisible(bool visible)
     {
-        // Pill is always visible; toggle no longer needed
-        _ = visible;
+        _navIndicatorBorder ??= EnumerateDescendants(this)
+            .OfType<WpfBorder>()
+            .FirstOrDefault(border => ReferenceEquals(border.RenderTransform, _navIndicatorTransform));
+
+        if (_navIndicatorBorder is not null)
+            _navIndicatorBorder.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void AddLogsNavigationButton()
     {
-        // No-op in v1.5.0: the Logs nav button is already declared in XAML.
+        if (_sidebarBorder?.Child is not WpfStackPanel sidebar)
+            return;
+
+        var navGrid = sidebar.Children.OfType<WpfGrid>().FirstOrDefault();
+        var navStack = navGrid?.Children.OfType<WpfStackPanel>()
+            .FirstOrDefault(sp => sp.Children.OfType<WpfButton>().Count() >= 6);
+
+        if (navStack is null)
+            return;
+
+        if (navStack.Children.OfType<WpfButton>().Any(b => Equals(b.CommandParameter, "8")))
+            return;
+
+        navStack.Children.Add(CreateLogsNavButton());
     }
 
     private WpfButton CreateLogsNavButton()
