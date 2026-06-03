@@ -11,4 +11,7 @@ public sealed class AiSettings
 
     public bool UseHybridMode { get; set; }
     public int ByeDpiSocksPort { get; set; } = 1080;
+
+    /// <summary>Порог процента успеха, ниже которого эволюционированная стратегия автоматически удаляется.</summary>
+    public int AutoDeleteBelowScore { get; set; } = 60;
 }

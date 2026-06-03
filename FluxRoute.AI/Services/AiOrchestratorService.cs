@@ -465,7 +465,7 @@ public sealed class AiOrchestratorService : IDisposable
         if (!started)
         {
             Notify($"ИИ: не удалось запустить движок для проверки «{g.DisplayName}».");
-            return;
+            return false;
         }
 
         var testProfile = new ProfileItem

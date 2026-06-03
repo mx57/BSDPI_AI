@@ -639,6 +639,7 @@ public partial class MainViewModel : ObservableObject
         settings.Ai ??= new AiSettings();
         AiEnabled = settings.Ai.Enabled;
         AiExplorationPermil = settings.Ai.ExplorationRatePermil;
+        AiAutoDeleteBelowScore = settings.Ai.AutoDeleteBelowScore;
         UseHybridMode = settings.Ai.UseHybridMode;
         ByeDpiSocksPort = settings.Ai.ByeDpiSocksPort;
 

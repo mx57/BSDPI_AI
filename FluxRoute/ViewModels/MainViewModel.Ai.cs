@@ -21,6 +21,9 @@ public partial class MainViewModel
     [ObservableProperty] private int aiExplorationPermil = 100;
     partial void OnAiExplorationPermilChanged(int value) => SaveSettings();
 
+    [ObservableProperty] private int aiAutoDeleteBelowScore = 60;
+    partial void OnAiAutoDeleteBelowScoreChanged(int value) => SaveSettings();
+
     [ObservableProperty] private bool useHybridMode;
     partial void OnUseHybridModeChanged(bool value) => SaveSettings();
 
@@ -36,6 +39,7 @@ public partial class MainViewModel
         var s = _settingsService.Load().Ai;
         s.Enabled = AiEnabled;
         s.ExplorationRatePermil = AiExplorationPermil;
+        s.AutoDeleteBelowScore = AiAutoDeleteBelowScore;
         s.UseHybridMode = UseHybridMode;
         s.ByeDpiSocksPort = ByeDpiSocksPort;
         return s;
