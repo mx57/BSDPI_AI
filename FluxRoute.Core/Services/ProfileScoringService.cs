@@ -10,6 +10,10 @@ public static class ProfileScoringService
         IReadOnlyList<CheckResult> checks,
         bool requireWinwsProcess)
     {
+        var warpCheck = checks.FirstOrDefault(x => x.Key == "Warp");
+        var hasWarpCheck = warpCheck != null;
+        var isWarpActive = warpCheck?.Ok == true;
+
         if (requireWinwsProcess && !processStarted)
             return 0;
 
@@ -21,14 +25,27 @@ public static class ProfileScoringService
         if (processStable)
             score += 15;
 
+        // Warp bonus: if we have a warp check and it's active, it's a good sign
+        if (isWarpActive)
+            score += 10;
+
         if (checks.Count > 0)
         {
-            var successRate = checks.Count(x => x.Ok) / (double)checks.Count;
-            score += (int)Math.Round(successRate * 55);
-            score += CalculateLatencyBonus(checks);
+            var otherChecks = checks.Where(x => x.Key != "Warp").ToList();
+            if (otherChecks.Count > 0)
+            {
+                var successRate = otherChecks.Count(x => x.Ok) / (double)otherChecks.Count;
+                score += (int)Math.Round(successRate * 55);
+                score += CalculateLatencyBonus(otherChecks);
 
-            if (checks.All(x => !x.Ok))
-                score -= 20;
+                if (otherChecks.All(x => !x.Ok))
+                    score -= 20;
+            }
+            else if (hasWarpCheck)
+            {
+                // If only warp check is present
+                score += isWarpActive ? 55 : 0;
+            }
         }
 
         if (requireWinwsProcess && processStarted && !processStable)

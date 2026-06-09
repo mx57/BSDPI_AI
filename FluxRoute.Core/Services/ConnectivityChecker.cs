@@ -34,6 +34,8 @@ public interface IConnectivityChecker
         bool useCurlForHttp,
         int maxParallelChecks,
         CancellationToken ct = default);
+
+    Task<CheckResult> CheckWarpAsync(CancellationToken ct = default);
 }
 
 public sealed class ConnectivityChecker : IConnectivityChecker
@@ -259,6 +261,44 @@ public sealed class ConnectivityChecker : IConnectivityChecker
         CancellationToken ct = default)
     {
         return CheckAllAsync(targets, useCurlForHttp: true, DefaultMaxParallelChecks, ct);
+    }
+
+    public async Task<CheckResult> CheckWarpAsync(CancellationToken ct = default)
+    {
+        var target = new TargetEntry { Key = "Warp", Kind = TargetKind.Http, Value = "http://connectivity.cloudflareclient.com/cdn-cgi/trace" };
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.Connectivity);
+            http.Timeout = TimeSpan.FromSeconds(5);
+            var resp = await http.GetStringAsync(target.Value, ct).ConfigureAwait(false);
+            sw.Stop();
+            var ok = resp.Contains("warp=on", StringComparison.OrdinalIgnoreCase);
+            return new CheckResult
+            {
+                Key = target.Key,
+                Kind = target.Kind,
+                Value = target.Value,
+                Ok = ok,
+                Detail = ok ? "Warp is ACTIVE" : "Warp is OFF",
+                ElapsedMs = sw.ElapsedMilliseconds,
+                StatusCode = 200,
+                Checker = "HttpClient"
+            };
+        }
+        catch (Exception ex)
+        {
+            return new CheckResult
+            {
+                Key = target.Key,
+                Kind = target.Kind,
+                Value = target.Value,
+                Ok = false,
+                Detail = ex.Message,
+                ElapsedMs = sw.ElapsedMilliseconds,
+                Checker = "HttpClient"
+            };
+        }
     }
 
     public async Task<(double successRate, List<CheckResult> results)> CheckAllAsync(

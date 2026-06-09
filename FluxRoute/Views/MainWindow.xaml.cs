@@ -83,6 +83,7 @@ public partial class MainWindow : Window
             new UpdaterService(),
             new AppUpdaterService(),
             new ByeDpiUpdaterService(),
+            new WarpUpdaterService(),
             new ConnectivityChecker(),
             new DpiEngineManager(Path.Combine(AppContext.BaseDirectory, "engine")),
             fingerprints,

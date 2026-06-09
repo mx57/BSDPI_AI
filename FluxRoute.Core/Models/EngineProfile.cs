@@ -38,5 +38,13 @@ public sealed class EngineProfile
     public string? DesyncFooling { get; set; }
     public string? FakeResend { get; set; }
 
+    public string? WarpConfig { get; set; }
+    public int? MTU { get; set; }
+    public bool GoolEnabled { get; set; }
+    public bool PsiphonEnabled { get; set; }
+    public string? PsiphonCountry { get; set; }
+    public bool ScanEnabled { get; set; }
+    public string? Reserved { get; set; }
+
     public List<string> ExtraArgs { get; set; } = [];
 }

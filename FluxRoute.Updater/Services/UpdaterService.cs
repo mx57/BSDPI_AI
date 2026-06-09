@@ -29,6 +29,144 @@ public interface IByeDpiUpdaterService
     Task<bool> InstallUpdateAsync(string byedpiDir, UpdateInfo update, Action<string> onProgress, CancellationToken ct = default);
 }
 
+public interface IWarpUpdaterService
+{
+    string GetLocalVersion(string warpDir);
+    Task<(UpdateInfo? update, string? error)> CheckForUpdateAsync(string warpDir, CancellationToken ct = default);
+    Task<(UpdateInfo? update, string? error)> GetLatestReleaseAsync(CancellationToken ct = default);
+    Task<bool> InstallUpdateAsync(string warpDir, UpdateInfo update, Action<string> onProgress, CancellationToken ct = default);
+}
+
+public sealed partial class WarpUpdaterService : IWarpUpdaterService
+{
+    private const string ApiUrl = "https://api.github.com/repos/bepass-org/warp-plus/releases/latest";
+    private const string VersionFile = "version.txt";
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public WarpUpdaterService(IHttpClientFactory httpClientFactory)
+    {
+        _httpClientFactory = httpClientFactory;
+    }
+
+    public WarpUpdaterService() : this(new FluxRoute.Core.Services.DefaultHttpClientFactory()) { }
+
+    public string GetLocalVersion(string warpDir)
+    {
+        var path = Path.Combine(warpDir, VersionFile);
+        if (File.Exists(path))
+        {
+            try { return File.ReadAllText(path).Trim(); }
+            catch { }
+        }
+        return "unknown";
+    }
+
+    private void SaveLocalVersion(string warpDir, string version)
+    {
+        var path = Path.Combine(warpDir, VersionFile);
+        File.WriteAllText(path, version.TrimStart('v', 'V'));
+    }
+
+    public async Task<(UpdateInfo? update, string? error)> GetLatestReleaseAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
+            http.DefaultRequestHeaders.Remove("User-Agent");
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Warp-Updater");
+
+            var json = await http.GetStringAsync(ApiUrl, ct).ConfigureAwait(false);
+
+            var tagMatch = Regex.Match(json, @"""tag_name""\s*:\s*""([^""]+)""");
+            var urlMatch = Regex.Match(json, @"""browser_download_url""\s*:\s*""([^""]*warp-plus[^""]*windows-amd64\.zip)""", RegexOptions.IgnoreCase);
+            var bodyMatch = Regex.Match(json, @"""body""\s*:\s*""([^""]*)""");
+
+            if (!tagMatch.Success)
+                return (null, "Не удалось найти tag_name в ответе GitHub API");
+
+            var version = tagMatch.Groups[1].Value.TrimStart('v', 'V');
+            var downloadUrl = urlMatch.Success ? urlMatch.Groups[1].Value : "";
+            var notes = bodyMatch.Success ? bodyMatch.Groups[1].Value : "";
+
+            return (new UpdateInfo
+            {
+                Version = version,
+                DownloadUrl = downloadUrl,
+                ReleaseNotes = notes
+            }, null);
+        }
+        catch (HttpRequestException ex) { return (null, $"Ошибка сети: {ex.Message}"); }
+        catch (TaskCanceledException) { return (null, "Таймаут запроса"); }
+        catch (Exception ex) { return (null, $"Ошибка: {ex.Message}"); }
+    }
+
+    public async Task<(UpdateInfo? update, string? error)> CheckForUpdateAsync(string warpDir, CancellationToken ct = default)
+    {
+        var (release, error) = await GetLatestReleaseAsync(ct).ConfigureAwait(false);
+        if (release is null) return (null, error);
+
+        var local = GetLocalVersion(warpDir);
+        if (local == release.Version)
+            return (null, null);
+
+        return (release, null);
+    }
+
+    public async Task<bool> InstallUpdateAsync(string warpDir, UpdateInfo update, Action<string> onProgress, CancellationToken ct = default)
+    {
+        var tempZip = Path.Combine(Path.GetTempPath(), "warp_update.zip");
+        var tempExtract = Path.Combine(Path.GetTempPath(), "warp_update_extract");
+
+        try
+        {
+            onProgress($"⬇️ Скачиваем Warp (warp-plus) {update.Version}...");
+
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
+            http.DefaultRequestHeaders.Remove("User-Agent");
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Warp-Updater");
+
+            var url = update.DownloadUrl;
+            if (string.IsNullOrEmpty(url)) return false;
+
+            var bytes = await http.GetByteArrayAsync(url, ct).ConfigureAwait(false);
+
+            await File.WriteAllBytesAsync(tempZip, bytes, ct).ConfigureAwait(false);
+            if (Directory.Exists(tempExtract))
+                Directory.Delete(tempExtract, recursive: true);
+            ZipFile.ExtractToDirectory(tempZip, tempExtract);
+
+            var exeFile = Directory.EnumerateFiles(tempExtract, "warp-plus*.exe", SearchOption.AllDirectories).FirstOrDefault();
+            if (exeFile is null)
+            {
+                onProgress("❌ warp-plus.exe не найден в архиве");
+                return false;
+            }
+
+            Directory.CreateDirectory(warpDir);
+            File.Copy(exeFile, Path.Combine(warpDir, "warp-plus.exe"), overwrite: true);
+
+            SaveLocalVersion(warpDir, update.Version);
+            onProgress($"✅ Warp {update.Version} установлен!");
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            onProgress("⚠️ Обновление Warp отменено.");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            onProgress($"❌ Ошибка: {ex.Message}");
+            return false;
+        }
+        finally
+        {
+            try { File.Delete(tempZip); } catch { }
+            try { Directory.Delete(tempExtract, recursive: true); } catch { }
+        }
+    }
+}
+
 public sealed partial class ByeDpiUpdaterService : IByeDpiUpdaterService
 {
     private const string ApiUrl = "https://api.github.com/repos/hufrea/byedpi/releases/latest";

@@ -7,6 +7,11 @@ public sealed class DpiRunMode
 {
     public const string Standalone = "standalone";
     public const string Hybrid = "hybrid";
+    public const string Warp = "warp";
+    public const string WarpZapret = "warp_zapret";
+    public const string WarpByeDpi = "warp_byedpi";
+    public const string WarpZapretChained = "warp_zapret_chained";
+    public const string WarpByeDpiChained = "warp_byedpi_chained";
     public const string Bypass = "bypass";
 }
 
@@ -37,6 +42,7 @@ public sealed class DpiEngineManager : IDisposable
             {
                 DpiEngineType.Zapret => new ZapretEngine(_engineDir),
                 DpiEngineType.ByeDpi => new ByeDpiEngine(_engineDir),
+                DpiEngineType.Warp => new WarpEngine(_engineDir),
                 _ => throw new ArgumentOutOfRangeException(nameof(key), $"Unsupported engine: {key}")
             };
             engine.StatusChanged += (_, status) =>
@@ -51,7 +57,10 @@ public sealed class DpiEngineManager : IDisposable
         {
             _runMode = mode switch
             {
-                DpiRunMode.Standalone or DpiRunMode.Hybrid or DpiRunMode.Bypass => mode,
+                DpiRunMode.Standalone or DpiRunMode.Hybrid or DpiRunMode.Warp or
+                DpiRunMode.WarpZapret or DpiRunMode.WarpByeDpi or
+                DpiRunMode.WarpZapretChained or DpiRunMode.WarpByeDpiChained or
+                DpiRunMode.Bypass => mode,
                 _ => DpiRunMode.Standalone,
             };
         }
@@ -104,6 +113,44 @@ public sealed class DpiEngineManager : IDisposable
                     ct).ConfigureAwait(false);
                 return zapretOk || byedpiOk;
 
+            case DpiRunMode.Warp:
+                await StopAllAsync(ct).ConfigureAwait(false);
+                return await StartAsync(DpiEngineType.Warp,
+                    profile.EngineType == DpiEngineType.Warp ? profile : CloneWithDefaults(DpiEngineType.Warp),
+                    ct).ConfigureAwait(false);
+
+            case DpiRunMode.WarpZapret:
+                await StopAllAsync(ct).ConfigureAwait(false);
+                var w1 = await StartAsync(DpiEngineType.Warp, CloneWithDefaults(DpiEngineType.Warp), ct).ConfigureAwait(false);
+                var z1 = await StartAsync(DpiEngineType.Zapret,
+                    profile.EngineType == DpiEngineType.Zapret ? profile : CloneWithDefaults(DpiEngineType.Zapret),
+                    ct).ConfigureAwait(false);
+                return w1 || z1;
+
+            case DpiRunMode.WarpByeDpi:
+                await StopAllAsync(ct).ConfigureAwait(false);
+                var w2 = await StartAsync(DpiEngineType.Warp, CloneWithDefaults(DpiEngineType.Warp), ct).ConfigureAwait(false);
+                var b2 = await StartAsync(DpiEngineType.ByeDpi,
+                    profile.EngineType == DpiEngineType.ByeDpi ? profile : CloneWithDefaults(DpiEngineType.ByeDpi),
+                    ct).ConfigureAwait(false);
+                return w2 || b2;
+
+            case DpiRunMode.WarpZapretChained:
+                await StopAllAsync(ct).ConfigureAwait(false);
+                var wc1 = await StartAsync(DpiEngineType.Warp, CloneWithDefaults(DpiEngineType.Warp), ct).ConfigureAwait(false);
+                var zc1 = await StartAsync(DpiEngineType.Zapret,
+                    ConfigureChained(profile.EngineType == DpiEngineType.Zapret ? profile : CloneWithDefaults(DpiEngineType.Zapret), 8086),
+                    ct).ConfigureAwait(false);
+                return wc1 && zc1;
+
+            case DpiRunMode.WarpByeDpiChained:
+                await StopAllAsync(ct).ConfigureAwait(false);
+                var wc2 = await StartAsync(DpiEngineType.Warp, CloneWithDefaults(DpiEngineType.Warp), ct).ConfigureAwait(false);
+                var bc2 = await StartAsync(DpiEngineType.ByeDpi,
+                    ConfigureChained(profile.EngineType == DpiEngineType.ByeDpi ? profile : CloneWithDefaults(DpiEngineType.ByeDpi), 8086),
+                    ct).ConfigureAwait(false);
+                return wc2 && bc2;
+
             case DpiRunMode.Bypass:
                 await StopAllAsync(ct).ConfigureAwait(false);
                 return true;
@@ -117,6 +164,28 @@ public sealed class DpiEngineManager : IDisposable
     {
         _activeProfiles.TryGetValue(type, out var profile);
         return profile;
+    }
+
+    private EngineProfile ConfigureChained(EngineProfile p, int upstreamPort)
+    {
+        // Add upstream proxy args if not already present
+        if (p.EngineType == DpiEngineType.Zapret)
+        {
+            if (!p.ExtraArgs.Any(x => x.Contains("--socks5")))
+            {
+                p.ExtraArgs.Add("--socks5");
+                p.ExtraArgs.Add($"127.0.0.1:{upstreamPort}");
+            }
+        }
+        else if (p.EngineType == DpiEngineType.ByeDpi)
+        {
+            if (!p.ExtraArgs.Any(x => x.Contains("--socks")))
+            {
+                p.ExtraArgs.Add("--socks");
+                p.ExtraArgs.Add($"127.0.0.1:{upstreamPort}");
+            }
+        }
+        return p;
     }
 
     public EngineProfile CloneWithDefaults(DpiEngineType type)
@@ -138,6 +207,11 @@ public sealed class DpiEngineManager : IDisposable
                 SplitPos = "1+s",
                 Auto = "torst",
                 Timeout = 3,
+            },
+            DpiEngineType.Warp => new EngineProfile
+            {
+                EngineType = DpiEngineType.Warp,
+                SocksPort = 8086
             },
             _ => new EngineProfile { EngineType = type },
         };

@@ -917,12 +917,18 @@
                                                 <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0" d:IsLocked="True">
                                                     <Run Text="ByeDPI: "/><Run Text="{Binding Updates.ByeDpiVersion, Mode=OneWay}" Foreground="#E6EDF3"/>
                                                 </TextBlock>
+                                                <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0" d:IsLocked="True">
+                                                    <Run Text="Warp: "/><Run Text="{Binding Updates.WarpVersion, Mode=OneWay}" Foreground="#E6EDF3"/>
+                                                </TextBlock>
                                                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0" d:IsLocked="True">
                                                     <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" VerticalAlignment="Center" Margin="0,0,6,0" Text="Режим:" d:IsLocked="True"/>
                                                     <ComboBox SelectedIndex="{Binding EngineMode}" Width="155" Height="24" FontFamily="Segoe UI" FontSize="11" d:IsLocked="True">
                                                         <ComboBoxItem Content="⚡ Zapret" d:IsLocked="True"/>
                                                         <ComboBoxItem Content="🔒 ByeDPI" d:IsLocked="True"/>
+                                                        <ComboBoxItem Content="🌐 Warp" d:IsLocked="True"/>
                                                         <ComboBoxItem Content="⚡🔒 Hybrid" d:IsLocked="True"/>
+                                                        <ComboBoxItem Content="🌐⚡ Warp + Zapret" d:IsLocked="True"/>
+                                                        <ComboBoxItem Content="🌐🔒 Warp + ByeDPI" d:IsLocked="True"/>
                                                     </ComboBox>
                                                 </StackPanel>
                                                 <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0" d:IsLocked="True">
@@ -1069,7 +1075,12 @@
                                                                             ToolTip="Удалить эволюционированную стратегию" d:IsLocked="True"/>
                                                                 </StackPanel>
                                                                 <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
-                                                                    <TextBlock Text="{Binding DisplayName}" FontFamily="Segoe UI" Foreground="#E6EDF3" FontSize="13" d:IsLocked="True"/>
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock Text="{Binding DisplayName}" FontFamily="Segoe UI" Foreground="#E6EDF3" FontSize="13" d:IsLocked="True"/>
+                                                                        <Border Background="#238636" CornerRadius="3" Padding="4,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                                            <TextBlock Text="{Binding EngineType}" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                                                        </Border>
+                                                                    </StackPanel>
                                                                     <TextBlock Text="{Binding OriginTag}" FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" d:IsLocked="True"/>
                                                                 </StackPanel>
                                                                 <TextBlock Grid.Column="2" Text="{Binding WilsonText}" ToolTip="{Binding WilsonToolTip}" FontFamily="Segoe UI" Foreground="#4FC3F7" FontSize="12" VerticalAlignment="Center" Margin="8,0,8,0" d:IsLocked="True"/>
@@ -1201,12 +1212,16 @@
                                                  Width="60" Height="26" VerticalContentAlignment="Center" d:IsLocked="True"/>
                                     </StackPanel>
 
-                                    <CheckBox Content="Гибридный режим (Zapret + ByeDPI одновременно)"
-                                              IsChecked="{Binding UseHybridMode}" Margin="0,0,0,8" d:IsLocked="True"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10" d:IsLocked="True">
-                                        <TextBlock Style="{StaticResource Lbl}" Text="ByeDPI SOCKS порт: " VerticalAlignment="Center" Margin="0,0,8,0" d:IsLocked="True"/>
-                                        <TextBox Text="{Binding ByeDpiSocksPort, UpdateSourceTrigger=PropertyChanged}"
-                                                 Width="60" Height="26" VerticalContentAlignment="Center" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,10" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Режим работы движков: " VerticalAlignment="Center" Margin="0,0,8,0" d:IsLocked="True"/>
+                                        <ComboBox SelectedIndex="{Binding EngineMode}" Width="155" Height="24" FontFamily="Segoe UI" FontSize="11" d:IsLocked="True">
+                                            <ComboBoxItem Content="⚡ Zapret" d:IsLocked="True"/>
+                                            <ComboBoxItem Content="🔒 ByeDPI" d:IsLocked="True"/>
+                                            <ComboBoxItem Content="🌐 Warp" d:IsLocked="True"/>
+                                            <ComboBoxItem Content="⚡🔒 Hybrid" d:IsLocked="True"/>
+                                            <ComboBoxItem Content="🌐⚡ Warp + Zapret" d:IsLocked="True"/>
+                                            <ComboBoxItem Content="🌐🔒 Warp + ByeDPI" d:IsLocked="True"/>
+                                        </ComboBox>
                                     </StackPanel>
 
                                     <Grid Margin="0,0,0,12" d:IsLocked="True">
@@ -1260,7 +1275,12 @@
                                                                     <ColumnDefinition Width="Auto"/>
                                                                 </Grid.ColumnDefinitions>
                                                                 <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center">
-                                                                    <TextBlock Text="{Binding DisplayName}" FontFamily="Segoe UI" Foreground="#E6EDF3" FontSize="13" d:IsLocked="True"/>
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock Text="{Binding DisplayName}" FontFamily="Segoe UI" Foreground="#E6EDF3" FontSize="13" d:IsLocked="True"/>
+                                                                        <Border Background="#238636" CornerRadius="3" Padding="4,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                                            <TextBlock Text="{Binding EngineType}" FontSize="9" Foreground="White" FontWeight="Bold"/>
+                                                                        </Border>
+                                                                    </StackPanel>
                                                                     <TextBlock Text="{Binding OriginTag}" FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" d:IsLocked="True"/>
                                                                 </StackPanel>
                                                                 <TextBlock Grid.Column="1" Text="{Binding WilsonText}" ToolTip="{Binding WilsonToolTip}" FontFamily="Segoe UI" Foreground="#4FC3F7" FontSize="12" VerticalAlignment="Center" Margin="8,0,8,0" d:IsLocked="True"/>
@@ -1475,6 +1495,37 @@
                                         <Button Content="⬆️ Установить" Style="{StaticResource TermBtn}"
                                                 Command="{Binding Updates.InstallByeDpiUpdateCommand}"
                                                 IsEnabled="{Binding Updates.IsByeDpiUpdating, Converter={StaticResource InvBool}}" d:IsLocked="True"/>
+                                    </StackPanel>
+
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+
+                                    <!-- WARP (WARP-PLUS) -->
+                                    <TextBlock Style="{StaticResource SecH}" Text="WARP (WARP-PLUS)" Margin="0,8,0,8" d:IsLocked="True"/>
+                                    <Grid Margin="0,0,0,10" d:IsLocked="True">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="26"/>
+                                            <RowDefinition Height="26"/>
+                                            <RowDefinition Height="26"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.WarpVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Доступна:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.WarpLatestVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Статус:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.WarpUpdateStatus}" d:IsLocked="True"/>
+                                    </Grid>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12" d:IsLocked="True">
+                                        <Button Content="🔍 Проверить обновления" Style="{StaticResource TermBtn}"
+                                                Margin="0,0,10,0"
+                                                Command="{Binding Updates.CheckWarpUpdateCommand}"
+                                                IsEnabled="{Binding Updates.IsWarpUpdating, Converter={StaticResource InvBool}}" d:IsLocked="True"/>
+                                        <Button Content="⬆️ Установить" Style="{StaticResource TermBtn}"
+                                                Command="{Binding Updates.InstallWarpUpdateCommand}"
+                                                IsEnabled="{Binding Updates.IsWarpUpdating, Converter={StaticResource InvBool}}" d:IsLocked="True"/>
                                     </StackPanel>
 
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>

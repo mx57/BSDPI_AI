@@ -7,9 +7,9 @@ public sealed class ProfileProbeResult
     public bool ProcessStarted { get; init; }
     public bool ProcessStable { get; init; }
     public IReadOnlyList<int> ProcessIds { get; init; } = Array.Empty<int>();
-    public IReadOnlyList<CheckResult> Checks { get; init; } = Array.Empty<CheckResult>();
-    public double SuccessRate { get; init; }
-    public int Score { get; init; }
+    public List<CheckResult> Checks { get; set; } = new();
+    public double SuccessRate { get; set; }
+    public int Score { get; set; }
     public TimeSpan Duration { get; init; }
     public string Summary { get; init; } = "";
 

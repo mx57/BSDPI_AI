@@ -399,6 +399,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IUpdaterService _updater;
     private readonly IAppUpdaterService _appUpdater;
     private readonly IByeDpiUpdaterService _byeDpiUpdater;
+    private readonly IWarpUpdaterService _warpUpdater;
     private readonly DpiEngineManager _engineManager;
     private readonly ISettingsService _settingsService;
     private readonly IConnectivityChecker _connectivity;
@@ -437,6 +438,7 @@ public partial class MainViewModel : ObservableObject
         IUpdaterService updaterService,
         IAppUpdaterService appUpdaterService,
         IByeDpiUpdaterService byeDpiUpdaterService,
+        IWarpUpdaterService warpUpdaterService,
         IConnectivityChecker connectivity,
         DpiEngineManager engineManager,
         NetworkFingerprintProvider aiFingerprints,
@@ -451,6 +453,7 @@ public partial class MainViewModel : ObservableObject
         _updater = updaterService;
         _appUpdater = appUpdaterService;
         _byeDpiUpdater = byeDpiUpdaterService;
+        _warpUpdater = warpUpdaterService;
         _engineManager = engineManager;
         _connectivity = connectivity;
         _aiRegistry = aiRegistry;
@@ -489,6 +492,7 @@ public partial class MainViewModel : ObservableObject
             updater: _updater,
             appUpdater: _appUpdater,
             byeDpiUpdater: _byeDpiUpdater,
+            warpUpdater: _warpUpdater,
             getEngineDir: () => EngineDir,
             getAutoUpdateEnabled: () => AutoUpdateEnabled,
             getCurrentEngineVersion: () => Updates.CurrentEngineVersion,
