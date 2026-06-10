@@ -45,6 +45,14 @@ public sealed class StrategyGenome
     public string? DesyncFooling { get; set; }
     public string? FakeResend { get; set; }
 
+    public string? WarpConfig { get; set; }
+    public int? MTU { get; set; }
+    public bool GoolEnabled { get; set; }
+    public bool PsiphonEnabled { get; set; }
+    public string? PsiphonCountry { get; set; }
+    public bool ScanEnabled { get; set; }
+    public string? Reserved { get; set; }
+
     public List<string> ExtraArgs { get; set; } = [];
 
     public string DisplayName { get; set; } = "";
@@ -90,6 +98,13 @@ public sealed class StrategyGenome
             DesyncAnyProtocol = DesyncAnyProtocol,
             DesyncFooling = DesyncFooling,
             FakeResend = FakeResend,
+            WarpConfig = WarpConfig,
+            MTU = MTU,
+            GoolEnabled = GoolEnabled,
+            PsiphonEnabled = PsiphonEnabled,
+            PsiphonCountry = PsiphonCountry,
+            ScanEnabled = ScanEnabled,
+            Reserved = Reserved,
             ExtraArgs = [..ExtraArgs],
         };
     }

@@ -15,6 +15,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
     private readonly IUpdaterService _updater;
     private readonly IAppUpdaterService _appUpdater;
     private readonly IByeDpiUpdaterService _byeDpiUpdater;
+    private readonly IWarpUpdaterService _warpUpdater;
     private readonly Func<string> _getEngineDir;
     private readonly Func<bool> _getAutoUpdateEnabled;
     private readonly Func<string> _getCurrentEngineVersion;
@@ -52,10 +53,18 @@ public sealed partial class UpdatesViewModel : ObservableObject
     [ObservableProperty] private bool isByeDpiUpdating;
     private UpdateInfo? _pendingByeDpiUpdate;
 
+    // ── Warp ──────────────────────────────────────────────────────────────
+    [ObservableProperty] private string warpVersion = "—";
+    [ObservableProperty] private string warpLatestVersion = "—";
+    [ObservableProperty] private string warpUpdateStatus = "Не проверялось";
+    [ObservableProperty] private bool isWarpUpdating;
+    private UpdateInfo? _pendingWarpUpdate;
+
     public UpdatesViewModel(
         IUpdaterService updater,
         IAppUpdaterService appUpdater,
         IByeDpiUpdaterService byeDpiUpdater,
+        IWarpUpdaterService warpUpdater,
         Func<string> getEngineDir,
         Func<bool> getAutoUpdateEnabled,
         Func<string> getCurrentEngineVersion,
@@ -69,6 +78,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         _updater = updater;
         _appUpdater = appUpdater;
         _byeDpiUpdater = byeDpiUpdater;
+        _warpUpdater = warpUpdater;
         _getEngineDir = getEngineDir;
         _getAutoUpdateEnabled = getAutoUpdateEnabled;
         _getCurrentEngineVersion = getCurrentEngineVersion;
@@ -81,10 +91,12 @@ public sealed partial class UpdatesViewModel : ObservableObject
 
         CurrentAppVersion = _appUpdater.GetCurrentVersion();
         RefreshByeDpiVersion();
+        RefreshWarpVersion();
     }
 
     private string EngineDir => _getEngineDir();
     private string ByeDpiDir => Path.Combine(EngineDir, "byedpi");
+    private string WarpDir => Path.Combine(EngineDir, "warp");
 
     private void AddLog(string message)
     {
@@ -96,6 +108,11 @@ public sealed partial class UpdatesViewModel : ObservableObject
     private void RefreshByeDpiVersion()
     {
         ByeDpiVersion = _byeDpiUpdater.GetLocalVersion(ByeDpiDir);
+    }
+
+    private void RefreshWarpVersion()
+    {
+        WarpVersion = _warpUpdater.GetLocalVersion(WarpDir);
     }
 
     public async Task CheckOnStartupAsync()
@@ -480,5 +497,68 @@ public sealed partial class UpdatesViewModel : ObservableObject
                 });
             }
         }
+    }
+
+    [RelayCommand]
+    private async Task CheckWarpUpdate()
+    {
+        WarpUpdateStatus = "🔍 Проверяем Warp...";
+        WarpLatestVersion = "…";
+
+        var (update, checkError) = await _warpUpdater.CheckForUpdateAsync(WarpDir);
+
+        if (update is null)
+        {
+            if (checkError is not null)
+            {
+                WarpUpdateStatus = $"❌ {checkError}";
+                AddLog($"❌ Warp: {checkError}");
+            }
+            else
+            {
+                WarpUpdateStatus = $"✅ Актуальная версия ({WarpVersion})";
+                AddLog("✅ Warp: обновлений нет");
+            }
+            return;
+        }
+
+        _pendingWarpUpdate = update;
+        WarpLatestVersion = update.Version;
+        WarpUpdateStatus = $"⬆️ Доступна версия {update.Version}";
+        AddLog($"⬆️ Warp: {update.Version}");
+    }
+
+    [RelayCommand]
+    private async Task InstallWarpUpdate()
+    {
+        if (_pendingWarpUpdate is null)
+        {
+            await CheckWarpUpdate();
+            if (_pendingWarpUpdate is null) return;
+        }
+
+        IsWarpUpdating = true;
+        var success = await _warpUpdater.InstallUpdateAsync(WarpDir, _pendingWarpUpdate,
+            msg =>
+            {
+                if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        WarpUpdateStatus = msg;
+                        AddLog(msg);
+                        _addAppLog(msg);
+                    });
+                }
+            });
+
+        if (success)
+        {
+            RefreshWarpVersion();
+            _pendingWarpUpdate = null;
+            WarpUpdateStatus = $"✅ Warp {WarpVersion}";
+        }
+
+        IsWarpUpdating = false;
     }
 }

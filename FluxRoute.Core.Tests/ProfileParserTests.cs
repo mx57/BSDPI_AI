@@ -198,7 +198,7 @@ public sealed class ProfileParserTests : IDisposable
     {
         var result = new ProfileProbeResult
         {
-            Checks = new[]
+            Checks = new List<CheckResult>
             {
                 new CheckResult { Key = "A", Ok = true },
                 new CheckResult { Key = "B", Ok = false },

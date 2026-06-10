@@ -40,6 +40,7 @@ public sealed class AiOrchestratorService : IDisposable
     private CancellationTokenSource? _cts;
     private int _consecutiveFailures;
     private int _probeCountSinceEvolve;
+    private int _probeCountSinceMtuTune;
     private DateTimeOffset _lastEvolutionUtc = DateTimeOffset.MinValue;
     private volatile bool _networkDirty;
     private StrategyGenome? _currentGenome;
@@ -280,11 +281,26 @@ public sealed class AiOrchestratorService : IDisposable
         var targets = BuildTargets();
         var result = await _probeService.ProbeCurrentAsync(active, targets, ct: ct).ConfigureAwait(false);
 
+        // If Warp is enabled in current run mode, check it too
+        var runMode = _engineManager.RunMode;
+        if (runMode == DpiRunMode.Warp || runMode == DpiRunMode.WarpZapret || runMode == DpiRunMode.WarpByeDpi)
+        {
+            var warpCheck = await _connectivity.CheckWarpAsync(ct).ConfigureAwait(false);
+            result.Checks.Add(warpCheck);
+            // Re-calculate score with warp check
+            result.Score = ProfileScoringService.Calculate(result.ProcessStarted, result.ProcessStable, result.Checks, true);
+        }
+
         var failedKeys = result.FailedChecks.Select(x => x.Key).ToList();
         var avgLat = result.Checks.Where(x => x.ElapsedMs.HasValue).Select(x => x.ElapsedMs!.Value).DefaultIfEmpty(0)
             .Average();
 
-        var engineName = _currentGenome.EngineType == DpiEngineType.ByeDpi ? "byedpi" : "zapret";
+        var engineName = _currentGenome.EngineType switch
+        {
+            DpiEngineType.ByeDpi => "byedpi",
+            DpiEngineType.Warp => "warp",
+            _ => "zapret"
+        };
         var failureSig = !result.ProcessStable
             ? $"{engineName}_failed"
             : result.Score < (int)Math.Round(FailThreshold * 100)
@@ -342,6 +358,10 @@ public sealed class AiOrchestratorService : IDisposable
 
         _probeCountSinceEvolve++;
         await MaybeEvolveAsync(fp, ct).ConfigureAwait(false);
+
+        _probeCountSinceMtuTune++;
+        if (_currentGenome?.EngineType == DpiEngineType.Warp)
+            await MaybeTuneMtuAsync(fp, ct).ConfigureAwait(false);
 
         if (result.IsWorking(FailThreshold))
             return;
@@ -521,6 +541,32 @@ public sealed class AiOrchestratorService : IDisposable
             Notify("ИИ: эволюция не дала новой стратегии (мало вариантов в пуле или нет родителей).");
     }
 
+    private async Task MaybeTuneMtuAsync(NetworkFingerprint fp, CancellationToken ct)
+    {
+        if (_probeCountSinceMtuTune < 5) return;
+        _probeCountSinceMtuTune = 0;
+
+        var current = _currentGenome;
+        if (current == null || current.EngineType != DpiEngineType.Warp) return;
+
+        var lastOutcomes = _history.LoadFor(current.Id, fp.Hash).TakeLast(5).ToList();
+        if (lastOutcomes.Count < 5) return;
+
+        var avgScore = lastOutcomes.Average(o => o.Score);
+        if (avgScore < 80)
+        {
+            var oldMtu = current.MTU ?? 1280;
+            var newMtu = oldMtu - 20;
+            if (newMtu < 1200) newMtu = 1420; // reset to high
+
+            Notify($"ИИ: Авто-подбор MTU для Warp: {oldMtu} -> {newMtu} (avg score: {avgScore:F1}%)");
+            current.MTU = newMtu;
+            _registry.Upsert(current);
+            _registry.Save();
+            await ApplyGenomeAsync(current, fp, ct, switched: false).ConfigureAwait(false);
+        }
+    }
+
     public async Task EvolveNowAsync(CancellationToken ct = default)
     {
         SyncBuiltins();
@@ -539,8 +585,11 @@ public sealed class AiOrchestratorService : IDisposable
         var all = _registry.GetActiveGenomes();
         return ai.EngineMode switch
         {
-            1 => all.Where(g => g.EngineType == DpiEngineType.ByeDpi).ToList(),
-            2 => all.Where(g => g.EngineType is DpiEngineType.Zapret or DpiEngineType.ByeDpi).ToList(),
+            (int)DpiEngineMode.ByeDpi => all.Where(g => g.EngineType == DpiEngineType.ByeDpi).ToList(),
+            (int)DpiEngineMode.Warp => all.Where(g => g.EngineType == DpiEngineType.Warp).ToList(),
+            (int)DpiEngineMode.Hybrid => all.Where(g => g.EngineType is DpiEngineType.Zapret or DpiEngineType.ByeDpi).ToList(),
+            (int)DpiEngineMode.WarpZapret => all.Where(g => g.EngineType is DpiEngineType.Warp or DpiEngineType.Zapret).ToList(),
+            (int)DpiEngineMode.WarpByeDpi => all.Where(g => g.EngineType is DpiEngineType.Warp or DpiEngineType.ByeDpi).ToList(),
             _ => all.Where(g => g.EngineType == DpiEngineType.Zapret).ToList(),
         };
     }
@@ -602,7 +651,13 @@ public sealed class AiOrchestratorService : IDisposable
             StopAfterProbe = false,
         };
 
-        var socksPort = g.EngineType == DpiEngineType.ByeDpi ? g.ToEngineProfile().SocksPort : (int?)null;
+        var socksPort = g.EngineType switch
+        {
+            DpiEngineType.ByeDpi => g.ToEngineProfile().SocksPort,
+            DpiEngineType.Warp => 8086,
+            _ => (int?)null
+        };
+
         if (socksPort is not null)
         {
             probeOptions = new ProfileProbeOptions
@@ -615,7 +670,7 @@ public sealed class AiOrchestratorService : IDisposable
                 UseCurlForHttp = probeOptions.UseCurlForHttp,
                 MaxParallelChecks = probeOptions.MaxParallelChecks,
                 Socks5Endpoint = $"127.0.0.1:{socksPort}",
-                ProcessName = "ciadpi",
+                ProcessName = g.EngineType == DpiEngineType.Warp ? "warp-plus" : "ciadpi",
             };
         }
         var result = await _probeService.ProbeCurrentAsync(testProfile, targets, probeOptions, ct).ConfigureAwait(false);
@@ -623,7 +678,12 @@ public sealed class AiOrchestratorService : IDisposable
         var avgLat = result.Checks.Where(x => x.ElapsedMs.HasValue).Select(x => x.ElapsedMs!.Value).DefaultIfEmpty(0)
             .Average();
 
-        var engineName = g.EngineType == DpiEngineType.ByeDpi ? "byedpi" : "zapret";
+        var engineName = g.EngineType switch
+        {
+            DpiEngineType.ByeDpi => "byedpi",
+            DpiEngineType.Warp => "warp",
+            _ => "zapret"
+        };
         var failureSig = !result.ProcessStable
             ? $"{engineName}_failed"
             : result.Score < (int)Math.Round(FailThreshold * 100)

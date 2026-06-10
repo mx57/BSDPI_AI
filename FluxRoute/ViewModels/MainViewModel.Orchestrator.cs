@@ -22,6 +22,7 @@ public sealed partial class AiStrategyRowVm : ObservableObject
 
     public Guid Id { get; }
     public string DisplayName { get; }
+    public string EngineType { get; }
     public string OriginTag { get; }
     public bool CanDelete { get; }
 
@@ -36,6 +37,7 @@ public sealed partial class AiStrategyRowVm : ObservableObject
         _registry = registry;
         Id = g.Id;
         DisplayName = g.DisplayName;
+        EngineType = g.EngineType.ToString();
         OriginTag = g.Origin == StrategyOrigin.Evolved ? "эволюция" : "встроенная";
         CanDelete = g.Origin == StrategyOrigin.Evolved;
         ApplyWilson(successes, trials, wilsonLower);

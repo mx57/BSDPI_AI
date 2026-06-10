@@ -12,6 +12,8 @@ public static class StrategyGenomeValidator
     {
         if (g.EngineType == DpiEngineType.ByeDpi)
             return IsValidByeDpi(g);
+        if (g.EngineType == DpiEngineType.Warp)
+            return IsValidWarp(g);
         return IsValidZapret(g);
     }
 
@@ -24,6 +26,12 @@ public static class StrategyGenomeValidator
             return false;
 
         return true;
+    }
+
+    private static bool IsValidWarp(StrategyGenome g)
+    {
+        // Warp strategies are valid if they are just Warp engine type for now
+        return g.EngineType == DpiEngineType.Warp;
     }
 
     private static bool IsValidByeDpi(StrategyGenome g)

@@ -31,13 +31,16 @@ public partial class MainViewModel
     partial void OnEngineModeChanged(int value)
     {
         SaveSettings();
-        var mode = value switch
+        var runMode = value switch
         {
-            1 => FluxRoute.Core.Models.DpiEngineMode.ByeDpi,
-            2 => FluxRoute.Core.Models.DpiEngineMode.Hybrid,
-            _ => FluxRoute.Core.Models.DpiEngineMode.Zapret
+            (int)DpiEngineMode.ByeDpi => DpiRunMode.Standalone,
+            (int)DpiEngineMode.Warp => DpiRunMode.Warp,
+            (int)DpiEngineMode.Hybrid => DpiRunMode.Hybrid,
+            (int)DpiEngineMode.WarpZapret => DpiRunMode.WarpZapret,
+            (int)DpiEngineMode.WarpByeDpi => DpiRunMode.WarpByeDpi,
+            _ => DpiRunMode.Standalone
         };
-        _engineManager.SetRunMode(value == 2 ? "hybrid" : "standalone");
+        _engineManager.SetRunMode(runMode);
     }
 
     [ObservableProperty] private int byeDpiSocksPort = 1080;

@@ -122,6 +122,7 @@ public partial class App : Application
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IUpdaterService, UpdaterService>();
         services.AddSingleton<IByeDpiUpdaterService, ByeDpiUpdaterService>();
+        services.AddSingleton<IWarpUpdaterService, WarpUpdaterService>();
         services.AddSingleton<IAppUpdaterService, AppUpdaterService>();
         services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
 
@@ -178,6 +179,7 @@ public partial class App : Application
             sp.GetRequiredService<IUpdaterService>(),
             sp.GetRequiredService<IAppUpdaterService>(),
             sp.GetRequiredService<IByeDpiUpdaterService>(),
+            sp.GetRequiredService<IWarpUpdaterService>(),
             sp.GetRequiredService<IConnectivityChecker>(),
             sp.GetRequiredService<DpiEngineManager>(),
             sp.GetRequiredService<NetworkFingerprintProvider>(),

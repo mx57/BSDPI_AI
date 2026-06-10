@@ -9,7 +9,7 @@ public sealed class StrategyEvolver
     private static readonly string[] SemanticMarkers = ["host", "endhost", "midsld", "sniext", "endsld"];
     private static readonly string[] DesyncModes = ["split", "fake", "fakesplit", "disorder", "fakedisorder", "multidisorder", "multisplit"];
     private static readonly string[] FakeTlsMods = ["orig", "rand", "rndsni", "dupsid", "padencap"];
-    private static readonly DpiEngineType[] EngineTypes = [DpiEngineType.Zapret, DpiEngineType.ByeDpi];
+    private static readonly DpiEngineType[] EngineTypes = [DpiEngineType.Zapret, DpiEngineType.ByeDpi, DpiEngineType.Warp];
     private static readonly string[] SplitPosCandidates = ["1", "2", "3", "7", "10", "1+s", "2+s", "3+s", "host", "midsld", "sniext"];
     private static readonly string[] DisorderPosCandidates = ["1", "3", "5", "1+s", "3+s"];
     private static readonly string[] FakePosCandidates = ["-1", "3", "7", "10"];
@@ -18,6 +18,7 @@ public sealed class StrategyEvolver
     private static readonly string[] ModHttpCandidates = ["hcsmix", "dcsmix", "rmspace", "hcsmix,dcsmix", "hcsmix,rmspace"];
     private static readonly string[] FoolingCandidates = ["md5sig", "badseq", "datanoack", "hopbyhop", "hopbyhop2", "badsum"];
     private static readonly string[] AnyProtocolCandidates = ["0", "1"];
+    private static readonly string[] PsiphonCountries = ["AT", "AU", "BE", "BG", "CA", "CH", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GB", "HR", "HU", "IE", "IN", "IT", "JP", "LV", "NL", "NO", "PL", "PT", "RO", "RS", "SE", "SG", "SK", "US"];
 
     private readonly AiStrategyRegistry _registry;
     private readonly AiHistoryStore _history;
@@ -197,6 +198,13 @@ public sealed class StrategyEvolver
             DesyncAnyProtocol = RngPickNullableRef(a.DesyncAnyProtocol, b.DesyncAnyProtocol),
             DesyncFooling = RngPickNullableRef(a.DesyncFooling, b.DesyncFooling),
             FakeResend = RngPickNullableRef(a.FakeResend, b.FakeResend),
+            WarpConfig = RngPickNullableRef(a.WarpConfig, b.WarpConfig),
+            MTU = RngPickNullableStruct(a.MTU, b.MTU),
+            GoolEnabled = RngPickBool(a.GoolEnabled, b.GoolEnabled),
+            PsiphonEnabled = RngPickBool(a.PsiphonEnabled, b.PsiphonEnabled),
+            PsiphonCountry = RngPickNullableRef(a.PsiphonCountry, b.PsiphonCountry),
+            ScanEnabled = RngPickBool(a.ScanEnabled, b.ScanEnabled),
+            Reserved = RngPickNullableRef(a.Reserved, b.Reserved),
             ExtraArgs = RngPickList(a.ExtraArgs, b.ExtraArgs),
             ParentIds = [a.Id, b.Id],
         };
@@ -229,6 +237,10 @@ public sealed class StrategyEvolver
         if (g.EngineType == DpiEngineType.ByeDpi)
         {
             MutateByeDpi(g, roll);
+        }
+        else if (g.EngineType == DpiEngineType.Warp)
+        {
+            MutateWarp(g, roll);
         }
         else
         {
@@ -276,6 +288,38 @@ public sealed class StrategyEvolver
                 if (g.SplitPosSemantic is not null)
                     g.SplitPos = _rng.Next(16, 180);
                 g.SplitPosSemantic = null;
+                break;
+        }
+    }
+
+    private void MutateWarp(StrategyGenome g, int roll)
+    {
+        switch (roll)
+        {
+            case 0:
+                g.EngineType = DpiEngineType.Zapret;
+                break;
+            case 1:
+                g.EngineType = DpiEngineType.ByeDpi;
+                break;
+            case 2:
+                g.MTU = (g.MTU ?? 1280) + (_rng.Next(3) - 1) * 20;
+                g.MTU = Math.Clamp(g.MTU.Value, 1200, 1500);
+                break;
+            case 3:
+                g.GoolEnabled = !g.GoolEnabled;
+                break;
+            case 4:
+                g.PsiphonEnabled = !g.PsiphonEnabled;
+                if (g.PsiphonEnabled) g.PsiphonCountry = PsiphonCountries[_rng.Next(PsiphonCountries.Length)];
+                break;
+            case 5:
+                g.ScanEnabled = !g.ScanEnabled;
+                break;
+            case 6:
+                g.Reserved = $"{_rng.Next(256)},{_rng.Next(256)},{_rng.Next(256)}";
+                break;
+            default:
                 break;
         }
     }
