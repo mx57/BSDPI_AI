@@ -1,4 +1,4 @@
-<<<<<<< fix/ai-orch-warp-ui-improvements-2973259468408057114
+
 <div align="center">
 
 <picture>
@@ -127,6 +127,4 @@
 **[⭐ Ставь звезду, если проект тебе помог!](https://github.com/mx57/FluxRoute_AI)**
 
 </div>
-=======
-.
->>>>>>> master
+
