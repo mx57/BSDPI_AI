@@ -10,6 +10,7 @@ public sealed class ProfileProbeResult
     public List<CheckResult> Checks { get; set; } = new();
     public double SuccessRate { get; set; }
     public int Score { get; set; }
+    public double? DownloadSpeedMbps { get; set; }
     public TimeSpan Duration { get; init; }
     public string Summary { get; init; } = "";
 

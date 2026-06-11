@@ -18,5 +18,6 @@ public enum DpiEngineMode
     WarpZapret = 4,
     WarpByeDpi = 5,
     SingBox = 6,
-    SingBoxZapret = 7
+    SingBoxZapret = 7,
+    AutoDiscovery = 8
 }

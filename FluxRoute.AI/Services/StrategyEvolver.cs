@@ -56,7 +56,8 @@ public sealed class StrategyEvolver
                 list ??= [];
                 var succ = list.Count(o => o.Score >= 50);
                 var trials = list.Count;
-                var wilson = WilsonScore.LowerBound(succ, trials);
+                var avgSpeed = list.Select(o => o.DownloadSpeedMbps).Where(s => s != null).DefaultIfEmpty(0).Average();
+                var wilson = WilsonScore.LowerBound(succ, trials, avgSpeedMbps: avgSpeed);
                 return (g, wilson, trials);
             })
             .OrderByDescending(x => x.wilson)
@@ -135,7 +136,8 @@ public sealed class StrategyEvolver
                 list ??= [];
                 var succ = list.Count(o => o.Score >= 50);
                 var trials = list.Count;
-                var w = WilsonScore.LowerBound(succ, trials);
+                var avgSpeed = list.Select(o => o.DownloadSpeedMbps).Where(s => s != null).DefaultIfEmpty(0).Average();
+                var w = WilsonScore.LowerBound(succ, trials, avgSpeedMbps: avgSpeed);
                 return (g, w);
             })
             .OrderByDescending(x => x.w)

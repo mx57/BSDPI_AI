@@ -315,6 +315,7 @@ public sealed class AiOrchestratorService : IDisposable
             Timestamp = DateTimeOffset.UtcNow,
             Score = result.Score,
             SuccessRate = result.SuccessRate,
+            DownloadSpeedMbps = result.DownloadSpeedMbps,
             AvgLatencyMs = avgLat,
             ProcessStable = result.ProcessStable,
             FailedTargetKeys = failedKeys,
@@ -464,7 +465,8 @@ public sealed class AiOrchestratorService : IDisposable
                 list ??= [];
                 var succ = list.Count(o => o.Score >= 50);
                 var trials = list.Count;
-                var wilson = WilsonScore.LowerBound(succ, trials);
+                var avgSpeed = list.Select(o => o.DownloadSpeedMbps).Where(s => s != null).DefaultIfEmpty(0).Average();
+                var wilson = WilsonScore.LowerBound(succ, trials, avgSpeedMbps: avgSpeed);
                 return (g, wilson);
             })
             .OrderByDescending(x => x.wilson)
@@ -583,7 +585,7 @@ public sealed class AiOrchestratorService : IDisposable
     private List<StrategyGenome> GenePool()
     {
         var ai = _aiSettings();
-        var all = _registry.GetActiveGenomes();
+        var all = _registry.GetActiveGenomes().ToList();
         return ai.EngineMode switch
         {
             (int)DpiEngineMode.ByeDpi => all.Where(g => g.EngineType == DpiEngineType.ByeDpi).ToList(),
@@ -593,6 +595,7 @@ public sealed class AiOrchestratorService : IDisposable
             (int)DpiEngineMode.WarpByeDpi => all.Where(g => g.EngineType is DpiEngineType.Warp or DpiEngineType.ByeDpi).ToList(),
             (int)DpiEngineMode.SingBox => all.Where(g => g.EngineType == DpiEngineType.SingBox).ToList(),
             (int)DpiEngineMode.SingBoxZapret => all.Where(g => g.EngineType is DpiEngineType.SingBox or DpiEngineType.Zapret).ToList(),
+            (int)DpiEngineMode.AutoDiscovery => all,
             _ => all.Where(g => g.EngineType == DpiEngineType.Zapret).ToList(),
         };
     }
@@ -706,6 +709,7 @@ public sealed class AiOrchestratorService : IDisposable
             Timestamp = DateTimeOffset.UtcNow,
             Score = result.Score,
             SuccessRate = result.SuccessRate,
+            DownloadSpeedMbps = result.DownloadSpeedMbps,
             AvgLatencyMs = avgLat,
             ProcessStable = result.ProcessStable,
             FailedTargetKeys = failedKeys,

@@ -350,6 +350,8 @@ public partial class MainWindow : Window
         {
             var ring = rings[i];
             var scale = scales[i];
+            if (ring == null || scale == null) continue;
+
             double alpha = alphas[i];
             int delay = delays[i];
 

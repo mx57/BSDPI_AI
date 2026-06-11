@@ -6,7 +6,7 @@
   <img width="650" alt="FluxRoute AI Logo" src="./assets/FluxRoute-dark.svg" />
 </picture>
 
-# FluxRoute AI `v1.7.0-alpha`
+# FluxRoute AI `v1.7.0-beta`
 
 ### ⚡ Интеллектуальный швейцарский нож для обхода DPI на Windows
 

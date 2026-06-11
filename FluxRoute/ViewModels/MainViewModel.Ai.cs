@@ -41,6 +41,7 @@ public partial class MainViewModel
             (int)DpiEngineMode.WarpByeDpi => FluxRoute.Core.Services.DpiRunMode.WarpByeDpi,
             (int)DpiEngineMode.SingBox => FluxRoute.Core.Services.DpiRunMode.SingBox,
             (int)DpiEngineMode.SingBoxZapret => FluxRoute.Core.Services.DpiRunMode.SingBoxZapret,
+            (int)DpiEngineMode.AutoDiscovery => FluxRoute.Core.Services.DpiRunMode.AutoDiscovery,
             _ => FluxRoute.Core.Services.DpiRunMode.Standalone
         };
         _engineManager.SetRunMode(runMode);

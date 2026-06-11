@@ -36,6 +36,8 @@ public interface IConnectivityChecker
         CancellationToken ct = default);
 
     Task<CheckResult> CheckWarpAsync(CancellationToken ct = default);
+
+    Task<double> CheckSpeedAsync(string url, string? socksEndpoint = null, CancellationToken ct = default);
 }
 
 public sealed class ConnectivityChecker : IConnectivityChecker
@@ -261,6 +263,78 @@ public sealed class ConnectivityChecker : IConnectivityChecker
         CancellationToken ct = default)
     {
         return CheckAllAsync(targets, useCurlForHttp: true, DefaultMaxParallelChecks, ct);
+    }
+
+    public async Task<double> CheckSpeedAsync(string url, string? socksEndpoint = null, CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        long totalBytes = 0;
+        try
+        {
+            if (IsCurlAvailable)
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "curl.exe",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                // Limit download to 5MB or 5 seconds
+                psi.ArgumentList.Add("--location");
+                psi.ArgumentList.Add("--insecure");
+                psi.ArgumentList.Add("--silent");
+                psi.ArgumentList.Add("--max-time");
+                psi.ArgumentList.Add("5");
+                psi.ArgumentList.Add("--range");
+                psi.ArgumentList.Add("0-5242880"); // 5MB
+                if (!string.IsNullOrEmpty(socksEndpoint))
+                {
+                    psi.ArgumentList.Add("--socks5");
+                    psi.ArgumentList.Add(socksEndpoint);
+                }
+                psi.ArgumentList.Add("--output");
+                psi.ArgumentList.Add(OperatingSystem.IsWindows() ? "NUL" : "/dev/null");
+                psi.ArgumentList.Add("--write-out");
+                psi.ArgumentList.Add("%{size_download}");
+                psi.ArgumentList.Add(url);
+
+                using var process = Process.Start(psi);
+                if (process != null)
+                {
+                    var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
+                    await process.WaitForExitAsync(ct).ConfigureAwait(false);
+                    var stdout = await stdoutTask.ConfigureAwait(false);
+                    if (long.TryParse(stdout.Trim(), out var bytes))
+                        totalBytes = bytes;
+                }
+            }
+            else
+            {
+                using var http = _httpClientFactory.CreateClient(HttpClientNames.Connectivity);
+                http.Timeout = TimeSpan.FromSeconds(5);
+                using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                {
+                    using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+                    var buffer = new byte[8192];
+                    int read;
+                    while (totalBytes < 5242880 && (read = await stream.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+                    {
+                        totalBytes += read;
+                        if (sw.Elapsed.TotalSeconds >= 5) break;
+                    }
+                }
+            }
+        }
+        catch { }
+        sw.Stop();
+
+        if (totalBytes == 0 || sw.Elapsed.TotalSeconds == 0) return 0;
+        // Speed in Mbps
+        return (totalBytes * 8.0) / (sw.Elapsed.TotalSeconds * 1024 * 1024);
     }
 
     public async Task<CheckResult> CheckWarpAsync(CancellationToken ct = default)

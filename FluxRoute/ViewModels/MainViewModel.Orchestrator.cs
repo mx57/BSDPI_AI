@@ -64,9 +64,9 @@ public sealed partial class AiStrategyRowVm : ObservableObject
             return;
         }
 
-        WilsonText = $"{wilsonLower * 100:0.#}% ({successes}/{trials})";
+        WilsonText = $"{wilsonLower:0.#}% ({successes}/{trials})";
         WilsonToolTip =
-            $"Нижняя граница Уилсона: {wilsonLower * 100:0.#}% — консервативная оценка качества для подбора ИИ (чем выше, тем надёжнее).\n" +
+            $"Нижняя граница Уилсона: {wilsonLower:0.#}% — консервативная оценка качества для подбора ИИ (чем выше, тем надёжнее).\n" +
             $"Успешных: {successes} из {trials} — доля проверок со счётом ≥50% (winws стабилен и цели доступны).";
     }
 

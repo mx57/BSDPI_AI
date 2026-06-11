@@ -7,6 +7,7 @@ public sealed class ProbeOutcome
     public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
     public int Score { get; set; }
     public double SuccessRate { get; set; }
+    public double? DownloadSpeedMbps { get; set; }
     public double AvgLatencyMs { get; set; }
     public bool ProcessStable { get; set; }
     public List<string> FailedTargetKeys { get; set; } = [];

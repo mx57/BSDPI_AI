@@ -14,6 +14,7 @@ public sealed class DpiRunMode
     public const string WarpByeDpiChained = "warp_byedpi_chained";
     public const string SingBox = "singbox";
     public const string SingBoxZapret = "singbox_zapret";
+    public const string AutoDiscovery = "auto_discovery";
     public const string Bypass = "bypass";
 }
 
@@ -64,6 +65,7 @@ public sealed class DpiEngineManager : IDisposable
                 DpiRunMode.WarpZapret or DpiRunMode.WarpByeDpi or
                 DpiRunMode.WarpZapretChained or DpiRunMode.WarpByeDpiChained or
                 DpiRunMode.SingBox or DpiRunMode.SingBoxZapret or
+                DpiRunMode.AutoDiscovery or
                 DpiRunMode.Bypass => mode,
                 _ => DpiRunMode.Standalone,
             };
@@ -168,6 +170,12 @@ public sealed class DpiEngineManager : IDisposable
                     profile.EngineType == DpiEngineType.Zapret ? profile : CloneWithDefaults(DpiEngineType.Zapret),
                     ct).ConfigureAwait(false);
                 return s1 || sz1;
+
+            case DpiRunMode.AutoDiscovery:
+                // For AutoDiscovery, we behave like standalone but without stopping others
+                // until the discovery phase is over.
+                // For now, implement as a simple standalone fallback.
+                return await StartAsync(type, profile, ct).ConfigureAwait(false);
 
             case DpiRunMode.Bypass:
                 await StopAllAsync(ct).ConfigureAwait(false);

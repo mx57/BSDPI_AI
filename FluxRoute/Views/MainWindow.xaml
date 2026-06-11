@@ -949,6 +949,7 @@
                                                         <ComboBoxItem Content="🌐🔒 Warp + ByeDPI" d:IsLocked="True"/>
                                                         <ComboBoxItem Content="📦 Sing-Box" d:IsLocked="True"/>
                                                         <ComboBoxItem Content="📦⚡ Sing-Box + Zapret" d:IsLocked="True"/>
+                                                        <ComboBoxItem Content="🤖 Auto-Discovery" d:IsLocked="True"/>
                                                     </ComboBox>
                                                 </StackPanel>
                                                 <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0" d:IsLocked="True">
@@ -1243,6 +1244,7 @@
                                             <ComboBoxItem Content="🌐🔒 Warp + ByeDPI" d:IsLocked="True"/>
                                                 <ComboBoxItem Content="📦 Sing-Box" d:IsLocked="True"/>
                                                 <ComboBoxItem Content="📦⚡ Sing-Box + Zapret" d:IsLocked="True"/>
+                                                <ComboBoxItem Content="🤖 Auto-Discovery" d:IsLocked="True"/>
                                         </ComboBox>
                                     </StackPanel>
 
@@ -2097,8 +2099,18 @@
                                             <TextBlock Text="Sing-Box требует файл конфигурации в папке engine/sing-box/config.json."
                                                        Foreground="#8B949E" FontSize="11" Margin="0,0,0,10" d:IsLocked="True"/>
 
-                                            <Button Content="🔍 Проверить установку" Style="{StaticResource TermBtn}"
-                                                    HorizontalAlignment="Left" d:IsLocked="True"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10" d:IsLocked="True">
+                                                <TextBlock Text="Статус:" Style="{StaticResource Lbl}" Margin="0,0,8,0" d:IsLocked="True"/>
+                                                <TextBlock Text="{Binding SingBoxConfigStatus}" Style="{StaticResource Val}" d:IsLocked="True"/>
+                                            </StackPanel>
+
+                                            <StackPanel Orientation="Horizontal" d:IsLocked="True">
+                                                <Button Content="🔍 Проверить конфиг" Style="{StaticResource TermBtn}"
+                                                        Command="{Binding ValidateSingBoxConfigCommand}"
+                                                        Margin="0,0,10,0" d:IsLocked="True"/>
+                                                <Button Content="📝 Редактировать" Style="{StaticResource TermBtn}"
+                                                        Command="{Binding OpenSingBoxConfigCommand}" d:IsLocked="True"/>
+                                            </StackPanel>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>

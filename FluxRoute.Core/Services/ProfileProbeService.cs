@@ -111,6 +111,13 @@ public sealed class ProfileProbeService
                 ct).ConfigureAwait(false);
         var score = ProfileScoringService.Calculate(processStarted, processStable, checks, options.RequireWinwsProcess);
 
+        double? speed = null;
+        if (score >= 80 && targetList.Any(t => t.Key == "YouTube"))
+        {
+            var yt = targetList.First(t => t.Key == "YouTube");
+            speed = await connectivity.CheckSpeedAsync(yt.Value, options.Socks5Endpoint, ct).ConfigureAwait(false);
+        }
+
         sw.Stop();
 
         return new ProfileProbeResult
@@ -122,6 +129,7 @@ public sealed class ProfileProbeService
             Checks = checks,
             SuccessRate = successRate,
             Score = score,
+            DownloadSpeedMbps = speed,
             Duration = sw.Elapsed,
             Summary = BuildSummary(processStarted, processStable, checks)
         };
