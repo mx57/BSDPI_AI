@@ -169,6 +169,7 @@
                                 </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter Property="Foreground" Value="#E6EDF3"/>
                                 <Setter Property="BorderBrush" Value="#4FC3F7"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -233,7 +234,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBox">
                         <Grid>
-                            <Border Background="{TemplateBinding Background}"
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}">
                                 <Grid>
@@ -275,6 +276,11 @@
                                 </Border>
                             </Popup>
                         </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#4FC3F7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -289,16 +295,19 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBoxItem">
-                        <Border Background="{TemplateBinding Background}"
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#1C2128"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#1C2128"/>
+                            </Trigger>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#264F78"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#264F78"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#264F78"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -313,6 +322,11 @@
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Margin" Value="0,4"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="Foreground" Value="#4FC3F7"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- ══════ SEPARATOR ══════ -->
@@ -327,10 +341,16 @@
             <Setter Property="Background" Value="#161B22"/>
             <Setter Property="Foreground" Value="#E6EDF3"/>
             <Setter Property="BorderBrush" Value="#30363D"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Padding" Value="6,4"/>
             <Setter Property="CaretBrush" Value="#E6EDF3"/>
+            <Style.Triggers>
+                <Trigger Property="IsFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#4FC3F7"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
@@ -400,6 +420,10 @@
                                                 </BeginStoryboard>
                                             </Trigger.ExitActions>
                                         </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+                                            <Setter TargetName="HoverOverlay" Property="Opacity" Value="1"/>
+                                        </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Button.Template>
@@ -449,6 +473,10 @@
                                                     </Storyboard>
                                                 </BeginStoryboard>
                                             </Trigger.ExitActions>
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+                                            <Setter TargetName="HoverOverlay" Property="Opacity" Value="1"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -891,7 +919,9 @@
                                                 <Button Content="Обновить список" Style="{StaticResource TermBtn}"
                                                         FontSize="11" Padding="8,4"
                                                         Command="{Binding RefreshProfilesCommand}"
-                                                        HorizontalAlignment="Left" d:IsLocked="True"/>
+                                                        HorizontalAlignment="Left" d:IsLocked="True"
+                                                        ToolTip="Обновить список профилей (.bat)"
+                                                        AutomationProperties.Name="Обновить список профилей"/>
                                             </StackPanel>
                                         </Border>
                                     </Grid>
@@ -1640,14 +1670,18 @@
 
                                     <WrapPanel d:IsLocked="True">
                                         <Button Content="🔄 Обновить" Style="{StaticResource TermBtn}"
-                                                Margin="0,0,8,8" Command="{Binding RefreshProfilesCommand}" d:IsLocked="True"/>
+                                                Margin="0,0,8,8" Command="{Binding RefreshProfilesCommand}" d:IsLocked="True"
+                                                ToolTip="Обновить статус компонентов" AutomationProperties.Name="Обновить диагностику"/>
                                         <Button Content="📋 Скопировать" Style="{StaticResource TermBtn}"
-                                                Margin="0,0,8,8" Command="{Binding CopyDiagnosticsCommand}" d:IsLocked="True"/>
+                                                Margin="0,0,8,8" Command="{Binding CopyDiagnosticsCommand}" d:IsLocked="True"
+                                                ToolTip="Скопировать диагностику в буфер обмена" AutomationProperties.Name="Скопировать диагностику"/>
                                         <Button Content="📄 Экспорт логов" Style="{StaticResource TermBtn}"
-                                                Margin="0,0,8,8" Command="{Binding ExportLogsCommand}" d:IsLocked="True"/>
+                                                Margin="0,0,8,8" Command="{Binding ExportLogsCommand}" d:IsLocked="True"
+                                                ToolTip="Экспортировать все логи в текстовый файл" AutomationProperties.Name="Экспорт логов"/>
                                         <Button Content="📦 Diagnostic Bundle" Style="{StaticResource TermBtn}"
                                                 Margin="0,0,8,8" Command="{Binding ExportDiagnosticBundleCommand}" d:IsLocked="True"
-                                                ToolTip="Сохранить ZIP-архив с логами, диагностикой и настройками"/>
+                                                ToolTip="Сохранить ZIP-архив с логами, диагностикой и настройками"
+                                                AutomationProperties.Name="Создать диагностический бандл"/>
                                     </WrapPanel>
 
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
