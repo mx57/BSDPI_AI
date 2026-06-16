@@ -793,7 +793,7 @@ public partial class MainViewModel : ObservableObject
     private async void MainAction()
     {
         if (IsRunning) Stop();
-        else await StartAsync().ConfigureAwait(false);
+        else await StartAsync();
     }
 
 

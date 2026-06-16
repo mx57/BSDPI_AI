@@ -81,7 +81,7 @@ public partial class MainViewModel
         if (IsRunning)
             Stop();
         else
-            await StartAsync().ConfigureAwait(false);
+            await StartAsync();
     }
 
     [RelayCommand]
