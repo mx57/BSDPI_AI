@@ -105,7 +105,7 @@
 
 Этот проект является свободным ПО и распространяется под лицензией **GNU GPLv3**.
 
-- **[klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)** — Оригинальный автор и архитектор. Огромное спасибо за фундамент!
+- **[klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)** — автор
 - **[bol-van/zapret](https://github.com/bol-van/zapret)** — Мощнейшее ядро для Windows.
 - **[hiddify/warp-plus](https://github.com/hiddify/warp-plus)** — За реализацию Warp.
 
