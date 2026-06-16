@@ -26,7 +26,6 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="16,8"/>
             <Setter Property="Margin" Value="0,0,10,0"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -73,6 +72,10 @@
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#4FC3F7"/>
+                                <Setter TargetName="HoverOverlay" Property="Opacity" Value="1"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -90,7 +93,6 @@
             <Setter Property="BorderBrush" Value="#DA3633"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -136,6 +138,10 @@
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#4FC3F7"/>
+                                <Setter TargetName="HoverOverlay" Property="Opacity" Value="1"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -153,7 +159,6 @@
             <Setter Property="BorderBrush" Value="#1E3A7A"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -198,6 +203,10 @@
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#4FC3F7"/>
+                                <Setter TargetName="HoverOverlay" Property="Opacity" Value="1"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -218,9 +227,11 @@
                        TextWrapping="Wrap" Margin="0,0,0,20"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="CancelBtn" Content="Отмена" Click="Cancel_Click"
-                        Style="{StaticResource DialogCancelBtn}"/>
+                        Style="{StaticResource DialogCancelBtn}"
+                        AutomationProperties.Name="Отмена"/>
                 <Button x:Name="ConfirmBtn" Content="Да" Click="Confirm_Click"
-                        Style="{StaticResource AccentConfirmBtn}"/>
+                        Style="{StaticResource AccentConfirmBtn}"
+                        AutomationProperties.Name="Подтвердить"/>
             </StackPanel>
         </StackPanel>
     </Border>

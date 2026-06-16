@@ -42,7 +42,8 @@
                 <Button Content="Продолжить без прав" Click="ContinueButton_Click"
                         FontFamily="Segoe UI" Foreground="#8B949E" Background="Transparent"
                         BorderThickness="1" BorderBrush="#30363D"
-                        Padding="16,8" FontSize="13" Cursor="Hand" Margin="0,0,10,0">
+                        Padding="16,8" FontSize="13" Cursor="Hand" Margin="0,0,10,0"
+                        AutomationProperties.Name="Продолжить без прав администратора">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Bd"
@@ -88,6 +89,10 @@
                                         </BeginStoryboard>
                                     </Trigger.ExitActions>
                                 </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#4FC3F7"/>
+                                    <Setter TargetName="HoverOverlay" Property="Opacity" Value="1"/>
+                                </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Button.Template>
@@ -96,7 +101,8 @@
                 <Button Content="Перезапустить с правами" Click="RestartAsAdminButton_Click"
                         FontFamily="Segoe UI" Foreground="#4A90E2" Background="Transparent"
                         BorderThickness="1" BorderBrush="#1E3A7A"
-                        Padding="16,8" FontSize="13" FontWeight="SemiBold" Cursor="Hand">
+                        Padding="16,8" FontSize="13" FontWeight="SemiBold" Cursor="Hand"
+                        AutomationProperties.Name="Перезапустить с правами администратора">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Bd"
@@ -140,6 +146,10 @@
                                             </Storyboard>
                                         </BeginStoryboard>
                                     </Trigger.ExitActions>
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#4FC3F7"/>
+                                    <Setter TargetName="HoverOverlay" Property="Opacity" Value="1"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
