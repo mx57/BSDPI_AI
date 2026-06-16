@@ -1,0 +1,88 @@
+name: Build and Release FluxRoute
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Read version from csproj
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$csproj = Get-Content .\FluxRoute\FluxRoute.csproj
+          $ver = $csproj.Project.PropertyGroup.Version
+          "VERSION=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "TAG=v$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Version: $ver, Tag: v$ver"
+
+      - name: Verify tag matches version
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          $expectedTag = "v${{ steps.version.outputs.VERSION }}"
+          $actualTag = "${{ github.ref_name }}"
+          if ($actualTag -ne $expectedTag) {
+            Write-Error "Tag mismatch: pushed tag '$actualTag' does not match version in .csproj '$expectedTag'. Please update the version in FluxRoute.csproj before pushing the tag."
+            exit 1
+          }
+          Write-Host "Tag '$actualTag' matches version in .csproj. OK."
+
+      - name: Restore solution
+        run: dotnet restore .\FluxRoute.slnx
+
+      - name: Run tests
+        run: dotnet test .\FluxRoute.slnx --configuration Release --no-restore
+
+      - name: Publish win-x64
+        run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\publish
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.TAG }}"
+          Compress-Archive -Path .\publish\* -DestinationPath ".\FluxRoute-$tag-portable.zip" -Force
+
+      - name: Create or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ steps.version.outputs.TAG }}"
+          $zip = ".\FluxRoute-$tag-portable.zip"
+
+          gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
+
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $zip --clobber --repo "$env:GITHUB_REPOSITORY"
+          }
+          else {
+            gh release create $tag $zip `
+              --title "$tag" `
+              --generate-notes `
+              --target "${{ github.ref_name }}" `
+              --repo "$env:GITHUB_REPOSITORY"
+          }

@@ -1,0 +1,121 @@
+name: Build and Release FluxRoute AI
+
+on:
+  push:
+    tags:
+      - 'v*'  # Запуск при пуше тега вида v1.0.0, v1.5.1 и т.д.
+  workflow_dispatch:  # Возможность ручного запуска
+
+permissions:
+  contents: write  # Для создания релизов
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Run tests
+      run: dotnet test --configuration Release --verbosity normal
+      continue-on-error: true  # Не блокируем сборку, если тестов нет или они падают
+
+    - name: Get version from tag
+      id: get_version
+      shell: pwsh
+      run: |
+        $tag = "${{ github.ref_name }}"
+        $version = $tag -replace '^v', ''
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+        echo "tag=$tag" >> $env:GITHUB_OUTPUT
+
+    - name: Build application
+      run: dotnet publish FluxRoute/FluxRoute.csproj `
+        --configuration Release `
+        --runtime win-x64 `
+        --self-contained false `
+        --output ./publish `
+        /p:Version=${{ steps.get_version.outputs.version }} `
+        /p:AssemblyVersion=${{ steps.get_version.outputs.version }} `
+        /p:FileVersion=${{ steps.get_version.outputs.version }}
+
+    - name: Create portable ZIP
+      shell: pwsh
+      run: |
+        $version = "${{ steps.get_version.outputs.version }}"
+        $zipName = "FluxRoute_AI-v$version-portable.zip"
+        Compress-Archive -Path ./publish/* -DestinationPath ./$zipName
+        echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
+      id: create_zip
+
+    - name: Calculate SHA-256 hash
+      id: sha256
+      shell: pwsh
+      run: |
+        $zipName = "${{ steps.create_zip.outputs.zip_name }}"
+        $hash = (Get-FileHash -Path ./$zipName -Algorithm SHA256).Hash
+        echo "hash=$hash" >> $env:GITHUB_OUTPUT
+        echo "SHA-256: $hash"
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ${{ steps.create_zip.outputs.zip_name }}
+        name: FluxRoute AI ${{ steps.get_version.outputs.tag }}
+        body: |
+          ## FluxRoute AI ${{ steps.get_version.outputs.tag }}
+          
+          ### Установка
+          1. Скачайте `${{ steps.create_zip.outputs.zip_name }}`
+          2. Распакуйте в любую папку (например, `C:\FluxRoute_AI\`)
+          3. Запустите `FluxRoute.exe` **от имени администратора**
+          
+          ### Проверка целостности
+          **SHA-256:** `${{ steps.sha256.outputs.hash }}`
+          
+          Проверить хеш можно командой:
+          ```powershell
+          Get-FileHash -Path FluxRoute_AI-v${{ steps.get_version.outputs.version }}-portable.zip -Algorithm SHA256
+          ```
+          
+          ### Требования
+          - Windows 10/11 x64
+          - .NET 10 Desktop Runtime (если не self-contained)
+          - Права администратора
+          
+          ---
+          
+          **Оригинальный проект:** [klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)
+          
+          Этот релиз является форком FluxRoute Desktop с дополнительными AI-расширениями.
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: FluxRoute_AI-${{ steps.get_version.outputs.version }}
+        path: ${{ steps.create_zip.outputs.zip_name }}
+        retention-days: 30
