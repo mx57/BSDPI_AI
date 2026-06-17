@@ -6,7 +6,7 @@
   <img width="650" alt="FluxRoute AI Logo" src="./assets/FluxRoute-dark.svg" />
 </picture>
 
-# FluxRoute AI `v1.7.1`
+# FluxRoute AI `v1.7.2`
 
 ### ⚡ Самообучающийся DPI-Bypass на Windows
 
