@@ -313,7 +313,6 @@ public sealed partial class LogsViewModel : ObservableObject
         if (!_initialized || _filteredLogEntries is null)
             return;
 
-        // Вместо немедленного обновления при каждой записи — ставим флаг и ждём 250 мс.
         _pendingTextRefresh = true;
         if (!_textRefreshTimer.IsEnabled)
             _textRefreshTimer.Start();

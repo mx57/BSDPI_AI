@@ -31,9 +31,6 @@ public partial class MainViewModel
     [DllImport("user32.dll")]
     private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
 
-    // Делегат оставлен, потому что поле _winEventCallback объявлено в MainViewModel.cs.
-    // Сам WinEventHook больше не устанавливаем: при массовом сканировании профилей он мог
-    // ломать WPF message pump и приводить к System.ExecutionEngineException в Dispatcher.cs.
     private delegate void WinEventProc(
         IntPtr hWinEventHook,
         uint eventType,
@@ -135,17 +132,8 @@ public partial class MainViewModel
         _startedViaBatFallback = false;
         _trackedPids = new HashSet<uint> { (uint)winws.Id };
 
-        StatusText = "Запущено";
-        CurrentStrategy = SelectedProfile?.DisplayName ?? "—";
-        RunningScriptName = SelectedProfile?.FileName ?? "—";
         _runStartedAt = DateTimeOffset.Now;
         _runningProcess = winws;
-        PidText = SafePidText(winws);
-        IsRunning = true;
-
-        Logs.Add($"Прямой запуск winws.exe: {RunningScriptName}");
-        Logs.Add($"winws.exe запущен как дочерний процесс FluxRoute, PID: {winws.Id}");
-        AddToRecentLogs($"✅ Запущен (PID: {winws.Id})");
 
         _ = TrackDirectWinwsAsync(winws);
 
@@ -155,6 +143,19 @@ public partial class MainViewModel
 
         if (UseHybridMode)
             _ = StartByeDpiAsync();
+
+        Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            StatusText = "Запущено";
+            CurrentStrategy = SelectedProfile?.DisplayName ?? "—";
+            RunningScriptName = SelectedProfile?.FileName ?? "—";
+            PidText = SafePidText(winws);
+            IsRunning = true;
+
+            Logs.Add($"Прямой запуск winws.exe: {RunningScriptName}");
+            Logs.Add($"winws.exe запущен как дочерний процесс FluxRoute, PID: {winws.Id}");
+            AddToRecentLogs($"✅ Запущен (PID: {winws.Id})");
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private async Task StartByeDpiAsync()
@@ -202,20 +203,24 @@ public partial class MainViewModel
         }
 
         _startedViaBatFallback = true;
-        StatusText = "Запущено";
-        CurrentStrategy = SelectedProfile.DisplayName;
-        RunningScriptName = SelectedProfile.FileName;
         _runStartedAt = DateTimeOffset.Now;
-        IsRunning = true;
-
-        Logs.Add($"Запуск через BAT: {RunningScriptName}");
-        AddToRecentLogs($"▶ Запуск: {RunningScriptName}");
-
+        _runningProcess = cmdProcess;
         _ = TrackWinwsAsync(cmdProcess);
 
         RefreshDiagnostics();
         UpdateRuntimeInfo();
         TryStartOrchestratorIfEnabled();
+
+        Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            StatusText = "Запущено";
+            CurrentStrategy = SelectedProfile.DisplayName;
+            RunningScriptName = SelectedProfile.FileName;
+            IsRunning = true;
+
+            Logs.Add($"Запуск через BAT: {RunningScriptName}");
+            AddToRecentLogs($"▶ Запуск: {RunningScriptName}");
+        }, System.Windows.Threading.DispatcherPriority.Background);
 
         if (UseHybridMode)
             _ = StartByeDpiAsync();
@@ -229,7 +234,6 @@ public partial class MainViewModel
 
         try
         {
-            // Даём процессу короткое время на запуск и обновляем дерево PID без WinEventHook.
             for (var i = 0; i < 20 && !ct.IsCancellationRequested; i++)
             {
                 await Task.Delay(100, ct).ConfigureAwait(false);
@@ -242,7 +246,6 @@ public partial class MainViewModel
                 }
                 catch
                 {
-                    // Процесс мог завершиться между проверками.
                 }
             }
 
@@ -250,15 +253,12 @@ public partial class MainViewModel
         }
         catch (OperationCanceledException)
         {
-            // Stop() was requested.
         }
         catch (ObjectDisposedException)
         {
-            // Процесс уже был очищен при Stop().
         }
         catch (InvalidOperationException)
         {
-            // Процесс мог завершиться/стать недоступным во время переключения профилей.
         }
 
         if (!ct.IsCancellationRequested)
@@ -305,7 +305,6 @@ public partial class MainViewModel
                 }
                 catch
                 {
-                    // ignored
                 }
 
                 _trackedPids = pids;
@@ -318,7 +317,6 @@ public partial class MainViewModel
                     }
                     catch
                     {
-                        // ignored
                     }
                 }
 
@@ -352,15 +350,12 @@ public partial class MainViewModel
         }
         catch (OperationCanceledException)
         {
-            // Stop() was requested.
         }
         catch (ObjectDisposedException)
         {
-            // Процесс уже был очищен при Stop().
         }
         catch (InvalidOperationException)
         {
-            // Процесс мог завершиться/стать недоступным во время переключения профилей.
         }
 
         if (!ct.IsCancellationRequested)
@@ -396,12 +391,9 @@ public partial class MainViewModel
             }
             catch
             {
-                // ignored
             }
         }
 
-        // In direct mode FluxRoute kills only its own tracked winws.exe.
-        // In BAT fallback mode we keep the old behavior for compatibility with profiles launched via cmd/start.
         if (_startedViaBatFallback)
         {
             try
@@ -414,7 +406,6 @@ public partial class MainViewModel
             }
             catch
             {
-                // ignored
             }
         }
 
@@ -439,7 +430,6 @@ public partial class MainViewModel
             }
             catch
             {
-                // ignored
             }
         }
 
@@ -458,11 +448,9 @@ public partial class MainViewModel
         IsRunning = false;
         _runStartedAt = null;
 
-        // Останавливаем ByeDPI если был запущен в гибридном режиме
         try { _ = _engineManager.StopAllAsync(); }
-        catch { /* ignored */ }
+        catch { }
 
-        // Останавливаем сервисы оркестратора вместе с Zapret (флаг OrchestratorEnabled не меняем).
         if (!_suppressOrchestratorStop)
             StopOrchestratorServices();
 
@@ -514,7 +502,6 @@ public partial class MainViewModel
 
     private void InstallWindowHook()
     {
-        // Отключено намеренно. CreateNoWindow=true скрывает winws/cmd без глобального WinEventHook.
     }
 
     private void RemoveWindowHook()
@@ -527,7 +514,6 @@ public partial class MainViewModel
             }
             catch
             {
-                // ignored
             }
 
             _winEventHook = IntPtr.Zero;

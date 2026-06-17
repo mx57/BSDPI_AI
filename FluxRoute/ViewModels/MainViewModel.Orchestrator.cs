@@ -485,18 +485,17 @@ public partial class MainViewModel
         if (ProfileScores.Count == 0 || ProfileScores.All(s => s.Score == 0))
             RebuildProfileScores();
 
-        if (AiEnabled)
+        Application.Current?.Dispatcher.BeginInvoke(() =>
         {
-            _aiOrchestrator.Start();
-        }
-        else
-        {
-            _orchestrator.Start();
-        }
+            if (AiEnabled)
+                _aiOrchestrator.Start();
+            else
+                _orchestrator.Start();
 
-        OrchestratorRunning = true;
-        StartProcessMonitor();
-        Logs.Add("[Оркестратор] Запущен в автоматическом режиме.");
+            OrchestratorRunning = true;
+            StartProcessMonitor();
+            Logs.Add("[Оркестратор] Запущен в автоматическом режиме.");
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     // ── Остановка сервисов оркестратора без изменения флага OrchestratorEnabled ──
