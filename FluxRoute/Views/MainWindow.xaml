@@ -553,6 +553,11 @@
                                                 </BeginStoryboard>
                                             </Trigger.ExitActions>
                                         </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#4FC3F7"/>
+                                            <Setter TargetName="HoverOverlay" Property="Opacity" Value="1"/>
+                                        </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Button.Template>
@@ -951,6 +956,8 @@
                                     <Border Style="{StaticResource Card}" Margin="0,0,0,12" d:IsLocked="True">
                                         <Button Command="{Binding ToggleStartStopCommand}"
                                                 Content="{Binding MainActionButtonText}"
+                                                ToolTip="{Binding MainActionButtonText}"
+                                                AutomationProperties.Name="{Binding MainActionButtonText}"
                                                 FontSize="14" Padding="28,8"
                                                 HorizontalAlignment="Center" d:IsLocked="True">
                                             <Button.Style>
@@ -1017,6 +1024,8 @@
                                                 <Button Content="Открыть папку" Style="{StaticResource TermBtn}"
                                                         FontSize="12" Padding="8,4"
                                                         Command="{Binding OpenEngineFolderCommand}"
+                                                        ToolTip="Открыть папку с движком"
+                                                        AutomationProperties.Name="Открыть папку с движком"
                                                         HorizontalAlignment="Left" Margin="0,0,0,4" d:IsLocked="True"/>
                                                 <Button Content="Показать логи" Visibility="Collapsed" Style="{StaticResource TermBtn}"
                                                         FontSize="12" Padding="8,4"
@@ -1025,6 +1034,8 @@
                                                 <Button Content="Проверить сейчас" Style="{StaticResource TermBtn}"
                                                         FontSize="12" Padding="8,4"
                                                         Command="{Binding CheckNowCommand}"
+                                                        ToolTip="Проверить доступность сайтов"
+                                                        AutomationProperties.Name="Проверить доступность сайтов"
                                                         HorizontalAlignment="Left" d:IsLocked="True"/>
                                             </StackPanel>
                                         </Border>
@@ -1231,14 +1242,16 @@
                                             Command="{Binding ClearOrchestratorLogsCommand}" d:IsLocked="True"/>
 
                                     <Border Style="{StaticResource LogArea}" Margin="0,8,0,0" Visibility="Collapsed" d:IsLocked="True">
-                                        <ItemsControl ItemsSource="{Binding OrchestratorLogs}" d:IsLocked="True">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
-                                                               FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding OrchestratorLogs}" d:IsLocked="True">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
+                                                                   FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
                                     </Border>
 
                                 </StackPanel>
@@ -1608,14 +1621,16 @@
 
                                     <TextBlock Style="{StaticResource SecH}" Text="ЛОГ ОБНОВЛЕНИЯ" Margin="0,8,0,4" d:IsLocked="True"/>
                                     <Border Style="{StaticResource LogArea}" MaxHeight="220" d:IsLocked="True">
-                                        <ItemsControl ItemsSource="{Binding UpdateLogs}" d:IsLocked="True">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
-                                                               FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding UpdateLogs}" d:IsLocked="True">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
+                                                                   FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
                                     </Border>
 
                                 </StackPanel>
@@ -1856,7 +1871,9 @@
                                         <Button Content="⏹ Остановить" Style="{StaticResource RedBtn}"
                                                 Margin="0,0,10,0" Command="{Binding ForceStopZapretServiceCommand}" d:IsLocked="True"/>
                                         <Button Content="🔄" Style="{StaticResource TermBtn}"
-                                                Command="{Binding RefreshServiceInfoCommand}" d:IsLocked="True"/>
+                                                Command="{Binding RefreshServiceInfoCommand}"
+                                                ToolTip="Обновить информацию о службе"
+                                                AutomationProperties.Name="Обновить статус службы" d:IsLocked="True"/>
                                     </StackPanel>
 
                                     <Border Background="#1C1500" BorderBrush="#5A4800" BorderThickness="1"
@@ -2298,11 +2315,17 @@
                                                       VerticalAlignment="Center" IsChecked="{Binding LogsAutoScroll, Mode=TwoWay}" d:IsLocked="True"/>
 
                                             <Button Content="Очистить" Style="{StaticResource TermBtn}" Height="28" Padding="10,0" Margin="0,0,8,8"
-                                                    Command="{Binding ClearUnifiedLogsCommand}" d:IsLocked="True"/>
+                                                    Command="{Binding ClearUnifiedLogsCommand}"
+                                                    ToolTip="Очистить все логи"
+                                                    AutomationProperties.Name="Очистить все логи" d:IsLocked="True"/>
                                             <Button Content="Скопировать" Style="{StaticResource TermBtn}" Height="28" Padding="10,0" Margin="0,0,8,8"
-                                                    Command="{Binding CopyUnifiedLogsCommand}" d:IsLocked="True"/>
+                                                    Command="{Binding CopyUnifiedLogsCommand}"
+                                                    ToolTip="Скопировать логи в буфер обмена"
+                                                    AutomationProperties.Name="Скопировать логи в буфер обмена" d:IsLocked="True"/>
                                             <Button Content="Сохранить" Style="{StaticResource TermBtn}" Height="28" Padding="10,0" Margin="0,0,8,8"
-                                                    Command="{Binding SaveUnifiedLogsCommand}" d:IsLocked="True"/>
+                                                    Command="{Binding SaveUnifiedLogsCommand}"
+                                                    ToolTip="Сохранить логи в файл"
+                                                    AutomationProperties.Name="Сохранить логи в файл" d:IsLocked="True"/>
                                         </WrapPanel>
                                     </StackPanel>
                                 </Border>
