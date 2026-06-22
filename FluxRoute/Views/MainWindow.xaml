@@ -1766,14 +1766,16 @@
 
                                     <TextBlock Style="{StaticResource SecH}" Text="СИСТЕМНЫЙ ЛОГ" Visibility="Collapsed" d:IsLocked="True"/>
                                     <Border Style="{StaticResource LogArea}" MaxHeight="200" Visibility="Collapsed" d:IsLocked="True">
-                                        <ItemsControl ItemsSource="{Binding Logs}" d:IsLocked="True">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
-                                                               FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding Logs}" d:IsLocked="True">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
+                                                                   FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
                                     </Border>
 
                                 </StackPanel>
@@ -2701,14 +2703,16 @@
                                                         AutomationProperties.Name="Очистить лог прокси"/>
                                     </StackPanel>
                                     <Border Style="{StaticResource LogArea}" MaxHeight="200" Visibility="Collapsed" d:IsLocked="True">
-                                        <ItemsControl ItemsSource="{Binding TgProxyLogs}" d:IsLocked="True">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding TgProxyLogs}" d:IsLocked="True">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
 																	   FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
                                     </Border>
 
                                 </StackPanel>
