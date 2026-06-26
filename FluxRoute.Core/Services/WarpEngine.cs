@@ -84,6 +84,9 @@ public sealed class WarpEngine : IDpiEngine
                 return false;
             }
 
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
             lock (_gate)
             {
                 _process = process;
