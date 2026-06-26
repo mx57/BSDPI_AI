@@ -6,31 +6,35 @@
   <img width="650" alt="BSDPI_AI Logo" src="./assets/BSDPI_AI-dark.svg" />
 </picture>
 
-# BSDPI_AI
+<br/>
 
-### Self-Learning DPI Bypass for Windows
+**ISP blocking you? BSDPI_AI finds a way.**
 
-**Unifies Zapret, ByeDPI, and Cloudflare Warp into a single adaptive system with an AI orchestrator.**
+Self-learning DPI bypass system that **automatically finds and evolves** working strategies for your network.
 
-[🇷🇺 Русский](README.md) | [📥 Download](https://github.com/mx57/BSDPI_AI/releases) | [🐛 Report Issue](https://github.com/mx57/BSDPI_AI/issues)
+[🇷🇺 Русский](README.md) · [📥 Download](https://github.com/mx57/BSDPI_AI/releases) · [🐛 Bug Report](https://github.com/mx57/BSDPI_AI/issues)
 
 ---
 
-[![Stars](https://img.shields.io/github/stars/mx57/BSDPI_AI?style=for-the-badge&logo=github&color=FFD700)](https://github.com/mx57/BSDPI_AI)
-[![Releases](https://img.shields.io/github/v/release/mx57/BSDPI_AI?include_prereleases&sort=semver&logo=github&label=version&style=for-the-badge&color=3FB950)](https://github.com/mx57/BSDPI_AI/releases)
-[![Downloads](https://img.shields.io/github/downloads/mx57/BSDPI_AI/total?logo=github&label=downloads&style=for-the-badge&color=4FC3F7)](https://github.com/mx57/BSDPI_AI/releases)
-[![.NET 10](https://img.shields.io/badge/.NET_10-512BD4?logo=dotnet&style=for-the-badge)](https://dotnet.microsoft.com/)
-[![License](https://img.shields.io/badge/GPLv3-blue.svg?style=for-the-badge)](./LICENSE)
+[![Stars](https://img.shields.io/github/stars/mx57/BSDPI_AI?style=flat-square&logo=github&color=FFD700)](https://github.com/mx57/BSDPI_AI)
+[![Release](https://img.shields.io/github/v/release/mx57/BSDPI_AI?include_prereleases&sort=semver&logo=github&label=latest&style=flat-square&color=3FB950)](https://github.com/mx57/BSDPI_AI/releases)
+[![Downloads](https://img.shields.io/github/downloads/mx57/BSDPI_AI/total?logo=github&label=downloads&style=flat-square&color=4FC3F7)](https://github.com/mx57/BSDPI_AI/releases)
+[![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&style=flat-square)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/badge/GPLv3-blue.svg?style=flat-square)](./LICENSE)
 
 </div>
 
 ---
 
-## Why BSDPI_AI?
+### Why does this matter?
 
-Typical GUIs for DPI tools just launch processes. **BSDPI_AI thinks.** Censorship and DPI filters change constantly — what worked yesterday may fail today. Our system uses mathematical models to automatically adapt to your specific ISP and network.
+DPI filters from ISPs evolve constantly. What worked yesterday gets blocked today. Manual profile switching is tedious and unreliable.
 
-> **This fork is the parent of all AI features that made it into the original FluxRoute release.**
+**BSDPI_AI solves this with AI:**
+- Analyzes which strategies **actually work on your network**
+- Auto-switches when current strategy fails
+- **Creates new** bypass parameters via genetic evolution
+- Remembers policies per Wi-Fi network and mobile connection
 
 ---
 
