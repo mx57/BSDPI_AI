@@ -20,17 +20,13 @@
           fill="none" stroke="url(#accent)" stroke-width="3"/>
     <path d="M45 20 L68 32 L68 52 C68 70 55 85 45 92 C35 85 22 70 22 52 L22 32 Z"
           fill="url(#accent)" opacity="0.15"/>
-    <!-- Lightning bolt inside shield -->
     <path d="M50 35 L38 58 L48 58 L42 80 L62 50 L50 50 Z"
           fill="url(#accent)" opacity="0.9"/>
   </g>
 
   <!-- Main title -->
-  <text x="145" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="700" fill="white" letter-spacing="2">
-    BSDPI
-  </text>
-  <text x="380" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="300" fill="url(#accent)" letter-spacing="2">
-    _AI
+  <text x="145" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="56" letter-spacing="2">
+    <tspan font-weight="700" fill="white">BSDPI</tspan><tspan font-weight="300" fill="url(#accent)">_AI</tspan>
   </text>
 
   <!-- Subtitle -->
