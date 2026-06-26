@@ -32,6 +32,12 @@ public sealed class AiStrategyRegistry
     private readonly object _gate = new();
     private AiStrategyPersistedModel _model = new();
 
+    // BOLT ⚡: Indexing dictionaries to replace O(N) linear searches with O(1) lookups.
+    // Significant performance boost when bandit history grows across multiple networks.
+    private readonly Dictionary<(Guid GenomeId, string NetworkHash), BanditStateEntry> _banditLookup = [];
+    private readonly Dictionary<Guid, List<BanditStateEntry>> _genomeLookup = [];
+    private readonly Dictionary<string, List<BanditStateEntry>> _networkLookup = [];
+
     public AiStrategyRegistry(string path)
     {
         _path = path;
@@ -41,6 +47,37 @@ public sealed class AiStrategyRegistry
     {
         get { lock (_gate) return _model.GenerationCounter; }
         set { lock (_gate) _model.GenerationCounter = value; }
+    }
+
+    private void RebuildLookups()
+    {
+        _banditLookup.Clear();
+        _genomeLookup.Clear();
+        _networkLookup.Clear();
+
+        foreach (var e in _model.Bandit)
+        {
+            AddEntryToLookups(e);
+        }
+    }
+
+    private void AddEntryToLookups(BanditStateEntry e)
+    {
+        _banditLookup[(e.GenomeId, e.NetworkHash)] = e;
+
+        if (!_genomeLookup.TryGetValue(e.GenomeId, out var gList))
+        {
+            gList = [];
+            _genomeLookup[e.GenomeId] = gList;
+        }
+        gList.Add(e);
+
+        if (!_networkLookup.TryGetValue(e.NetworkHash, out var nList))
+        {
+            nList = [];
+            _networkLookup[e.NetworkHash] = nList;
+        }
+        nList.Add(e);
     }
 
     public void Load()
@@ -65,6 +102,8 @@ public sealed class AiStrategyRegistry
             {
                 _model = new AiStrategyPersistedModel();
             }
+
+            RebuildLookups();
         }
     }
 
@@ -132,7 +171,13 @@ public sealed class AiStrategyRegistry
         lock (_gate)
         {
             var n = _model.Genomes.RemoveAll(g => g.Id == id);
-            _model.Bandit.RemoveAll(b => b.GenomeId == id);
+            var removedBandits = _model.Bandit.RemoveAll(b => b.GenomeId == id);
+
+            if (n > 0 || removedBandits > 0)
+            {
+                RebuildLookups();
+            }
+
             return n > 0;
         }
     }
@@ -156,12 +201,12 @@ public sealed class AiStrategyRegistry
     {
         lock (_gate)
         {
-            var e = _model.Bandit.FirstOrDefault(b => b.GenomeId == genomeId && b.NetworkHash == networkHash);
-            if (e is not null)
+            if (_banditLookup.TryGetValue((genomeId, networkHash), out var e))
                 return e;
 
             e = new BanditStateEntry { GenomeId = genomeId, NetworkHash = networkHash, Alpha = 1, Beta = 1 };
             _model.Bandit.Add(e);
+            AddEntryToLookups(e);
             return e;
         }
     }
@@ -170,11 +215,11 @@ public sealed class AiStrategyRegistry
     {
         lock (_gate)
         {
-            var e = _model.Bandit.FirstOrDefault(b => b.GenomeId == genomeId && b.NetworkHash == networkHash);
-            if (e is null)
+            if (!_banditLookup.TryGetValue((genomeId, networkHash), out var e))
             {
                 e = new BanditStateEntry { GenomeId = genomeId, NetworkHash = networkHash, Alpha = 1, Beta = 1 };
                 _model.Bandit.Add(e);
+                AddEntryToLookups(e);
             }
 
             e.Alpha += 1;
@@ -185,11 +230,11 @@ public sealed class AiStrategyRegistry
     {
         lock (_gate)
         {
-            var e = _model.Bandit.FirstOrDefault(b => b.GenomeId == genomeId && b.NetworkHash == networkHash);
-            if (e is null)
+            if (!_banditLookup.TryGetValue((genomeId, networkHash), out var e))
             {
                 e = new BanditStateEntry { GenomeId = genomeId, NetworkHash = networkHash, Alpha = 1, Beta = 1 };
                 _model.Bandit.Add(e);
+                AddEntryToLookups(e);
             }
 
             e.Beta += 1;
@@ -200,8 +245,7 @@ public sealed class AiStrategyRegistry
     {
         lock (_gate)
         {
-            var e = _model.Bandit.FirstOrDefault(b => b.GenomeId == genomeId && b.NetworkHash == networkHash);
-            if (e is null)
+            if (!_banditLookup.TryGetValue((genomeId, networkHash), out var e))
                 return 0;
             return e.Alpha + e.Beta - 2;
         }
@@ -213,10 +257,13 @@ public sealed class AiStrategyRegistry
         {
             double succ = 0;
             double fail = 0;
-            foreach (var x in _model.Bandit.Where(t => t.GenomeId == genomeId))
+            if (_genomeLookup.TryGetValue(genomeId, out var entries))
             {
-                succ += x.Alpha - 1;
-                fail += x.Beta - 1;
+                foreach (var x in entries)
+                {
+                    succ += x.Alpha - 1;
+                    fail += x.Beta - 1;
+                }
             }
 
             return (succ + 1, fail + 1);
@@ -228,8 +275,11 @@ public sealed class AiStrategyRegistry
         lock (_gate)
         {
             double n = 0;
-            foreach (var x in _model.Bandit.Where(t => t.NetworkHash == networkHash))
-                n += x.Alpha + x.Beta - 2;
+            if (_networkLookup.TryGetValue(networkHash, out var entries))
+            {
+                foreach (var x in entries)
+                    n += x.Alpha + x.Beta - 2;
+            }
             return Math.Max(n, 0);
         }
     }
@@ -239,6 +289,7 @@ public sealed class AiStrategyRegistry
         lock (_gate)
         {
             _model = new AiStrategyPersistedModel();
+            RebuildLookups();
         }
 
         Save();
