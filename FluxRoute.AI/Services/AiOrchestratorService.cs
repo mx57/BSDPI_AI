@@ -40,10 +40,13 @@ public sealed class AiOrchestratorService : IDisposable
     private readonly StrategyEvolver _evolver;
 
     private CancellationTokenSource? _cts;
+    private readonly SemaphoreSlim _loopSignal = new(0, 1);
     private int _consecutiveFailures;
     private int _probeCountSinceEvolve;
     private int _probeCountSinceMtuTune;
     private DateTimeOffset _lastEvolutionUtc = DateTimeOffset.MinValue;
+    private List<TargetEntry>? _cachedCustomTargets;
+    private DateTime _lastTargetsWriteTime = DateTime.MinValue;
     private volatile bool _networkDirty;
     private StrategyGenome? _currentGenome;
     private readonly ConcurrentDictionary<string, (int score, DateTimeOffset at)> _networkProbeCache = new();
@@ -158,8 +161,14 @@ public sealed class AiOrchestratorService : IDisposable
         }
     }
 
-    private void OnNetworkChanged(object? sender, (NetworkFingerprint OldFp, NetworkFingerprint NewFp) e) =>
+    private void OnNetworkChanged(object? sender, (NetworkFingerprint OldFp, NetworkFingerprint NewFp) e)
+    {
         _networkDirty = true;
+        if (_loopSignal.CurrentCount == 0)
+        {
+            try { _loopSignal.Release(); } catch (ObjectDisposedException) { }
+        }
+    }
 
     private async Task LoopAsync(CancellationToken ct)
     {
@@ -191,7 +200,7 @@ public sealed class AiOrchestratorService : IDisposable
 
                 try
                 {
-                    await Task.Delay(interval, ct).ConfigureAwait(false);
+                    await _loopSignal.WaitAsync(interval, ct).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -775,7 +784,10 @@ public sealed class AiOrchestratorService : IDisposable
 
             var name = Path.GetFileNameWithoutExtension(bat);
             var genome = GenomeParser.FromLaunchPlan(plan, name, StrategyOrigin.Builtin);
-            genome.Id = StableGuid.FromString("builtin:" + Path.GetFullPath(bat));
+
+            var relativePath = Path.GetRelativePath(engineDir, bat).Replace('\\', '/');
+            genome.Id = StableGuid.FromString("builtin:" + relativePath);
+
             genome.SourceBatPath = bat;
             genome.BatFileName = fn;
             genome.DisplayName = name;
@@ -829,7 +841,29 @@ public sealed class AiOrchestratorService : IDisposable
 
     private List<TargetEntry> BuildTargets()
     {
-        var targets = TargetEntry.ParseFile(_getTargetsPath());
+        var path = _getTargetsPath();
+        List<TargetEntry> customTargets;
+
+        try
+        {
+            var lastWrite = File.Exists(path) ? File.GetLastWriteTime(path) : DateTime.MinValue;
+            if (_cachedCustomTargets == null || lastWrite > _lastTargetsWriteTime)
+            {
+                customTargets = TargetEntry.ParseFile(path);
+                _cachedCustomTargets = customTargets;
+                _lastTargetsWriteTime = lastWrite;
+            }
+            else
+            {
+                customTargets = _cachedCustomTargets;
+            }
+        }
+        catch
+        {
+            customTargets = _cachedCustomTargets ?? [];
+        }
+
+        var targets = new List<TargetEntry>(customTargets);
 
         foreach (var site in EnabledSites)
         {
@@ -858,5 +892,9 @@ public sealed class AiOrchestratorService : IDisposable
         });
     }
 
-    public void Dispose() => Stop();
+    public void Dispose()
+    {
+        Stop();
+        _loopSignal.Dispose();
+    }
 }
