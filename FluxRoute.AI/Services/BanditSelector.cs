@@ -32,31 +32,35 @@ public sealed class BanditSelector
         if (usable.Count == 0)
             return null;
 
+        // BOLT ⚡: Bulk fetch states to minimize lock contention.
+        var states = _registry.GetBanditStates(usable.Select(g => g.Id), networkHash);
+
         if (_rng.NextDouble() * 1000 < explorationPermil)
         {
-            usable.Sort((a, b) =>
-                _registry.SumPullsForGenomeOnNetwork(a.Id, networkHash)
-                    .CompareTo(_registry.SumPullsForGenomeOnNetwork(b.Id, networkHash)));
-            return usable[0];
+            // BOLT ⚡: O(N) selection using MinBy instead of O(N log N) Sort.
+            return usable.MinBy(g => states.TryGetValue(g.Id, out var s) ? s.Alpha + s.Beta - 2 : 0);
         }
 
         var effective = _aiSettings().ParetoEnabled
-            ? ParetoFront(usable, networkHash)
+            ? ParetoFrontInternal(usable, states)
             : usable;
         if (effective.Count == 0) effective = usable;
 
-        var totalT = effective.Sum(g => 1 + _registry.SumPullsForGenomeOnNetwork(g.Id, networkHash));
+        // BOLT ⚡: Using already fetched states for O(N) sum.
+        var totalT = effective.Sum(g => 1.0 + (states.TryGetValue(g.Id, out var s) ? s.Alpha + s.Beta - 2 : 0));
 
         StrategyGenome? best = null;
         double bestScore = double.MinValue;
 
         foreach (var g in effective)
         {
-            var entry = _registry.GetOrCreateBandit(g.Id, networkHash);
-            var pulls = entry.Alpha + entry.Beta - 2;
+            // If state doesn't exist, we'll need GetOrCreateBandit later if it's picked or for scoring,
+            // but for sampling we can use defaults or aggregated data.
+            states.TryGetValue(g.Id, out var entry);
 
-            double alpha = entry.Alpha;
-            double beta = entry.Beta;
+            double alpha = entry?.Alpha ?? 1;
+            double beta = entry?.Beta ?? 1;
+            var pulls = alpha + beta - 2;
 
             double sampleOrUcb;
             if (pulls < 1)
@@ -89,11 +93,16 @@ public sealed class BanditSelector
 
     public StrategyGenome? BestKnownForNetwork(IReadOnlyList<StrategyGenome> candidates, string networkHash)
     {
+        // BOLT ⚡: Bulk fetch states to minimize lock contention.
+        var states = _registry.GetBanditStates(candidates.Select(g => g.Id), networkHash);
+
         StrategyGenome? best = null;
         double bestMean = -1;
         foreach (var g in candidates)
         {
-            var entry = _registry.GetOrCreateBandit(g.Id, networkHash);
+            if (!states.TryGetValue(g.Id, out var entry))
+                continue;
+
             var pulls = entry.Alpha + entry.Beta - 2;
             if (pulls < 1)
                 continue;
@@ -111,14 +120,22 @@ public sealed class BanditSelector
 
     public List<StrategyGenome> ParetoFront(IReadOnlyList<StrategyGenome> candidates, string networkHash)
     {
+        var states = _registry.GetBanditStates(candidates.Select(g => g.Id), networkHash);
+        return ParetoFrontInternal(candidates, states);
+    }
+
+    private List<StrategyGenome> ParetoFrontInternal(IReadOnlyList<StrategyGenome> candidates, IReadOnlyDictionary<Guid, BanditStateEntry> states)
+    {
         var scored = candidates
             .Select(g =>
             {
-                var entry = _registry.GetOrCreateBandit(g.Id, networkHash);
-                var pulls = entry.Alpha + entry.Beta - 2;
+                states.TryGetValue(g.Id, out var entry);
+                var pulls = (entry?.Alpha ?? 1) + (entry?.Beta ?? 1) - 2;
                 if (pulls < 1) return (g, score: 0.5, latency: 1000.0);
-                var score = entry.Alpha / (entry.Alpha + entry.Beta);
-                var latency = entry.Alpha > 0 ? entry.Alpha / (entry.Alpha + entry.Beta) * 100 : 500;
+                var alpha = entry!.Alpha;
+                var beta = entry.Beta;
+                var score = alpha / (alpha + beta);
+                var latency = alpha > 0 ? alpha / (alpha + beta) * 100 : 500;
                 return (g, score, latency);
             })
             .ToList();

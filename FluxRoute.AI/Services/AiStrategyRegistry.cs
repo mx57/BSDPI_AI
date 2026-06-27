@@ -211,6 +211,23 @@ public sealed class AiStrategyRegistry
         }
     }
 
+    /// <summary>
+    /// BOLT ⚡: Batch retrieval of bandit states to minimize lock acquisitions in decision loops.
+    /// </summary>
+    public IReadOnlyDictionary<Guid, BanditStateEntry> GetBanditStates(IEnumerable<Guid> genomeIds, string networkHash)
+    {
+        lock (_gate)
+        {
+            var result = new Dictionary<Guid, BanditStateEntry>();
+            foreach (var id in genomeIds)
+            {
+                if (_banditLookup.TryGetValue((id, networkHash), out var e))
+                    result[id] = e;
+            }
+            return result;
+        }
+    }
+
     public void RecordBanditSuccess(Guid genomeId, string networkHash)
     {
         lock (_gate)
