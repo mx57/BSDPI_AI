@@ -3,6 +3,7 @@ namespace FluxRoute.Core.Models;
 public sealed class AiSettings
 {
     public bool Enabled { get; set; }
+    public bool UseUcb1 { get; set; }
     public int ExplorationRatePermil { get; set; } = 100;
     public int MaxEvolvedStrategies { get; set; } = 24;
     public int EvolutionIntervalMinutes { get; set; } = 60;

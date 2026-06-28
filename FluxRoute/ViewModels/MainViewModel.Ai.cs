@@ -19,6 +19,9 @@ public partial class MainViewModel
             RebuildAiStrategyRows();
     }
 
+    [ObservableProperty] private bool useUcb1;
+    partial void OnUseUcb1Changed(bool value) => SaveSettings();
+
     [ObservableProperty] private int aiExplorationPermil = 100;
     partial void OnAiExplorationPermilChanged(int value) => SaveSettings();
 
@@ -108,6 +111,7 @@ public partial class MainViewModel
         return new AiSettings
         {
             Enabled = AiEnabled,
+            UseUcb1 = UseUcb1,
             ExplorationRatePermil = AiExplorationPermil,
             AutoDeleteBelowScore = AiAutoDeleteBelowScore,
             EngineMode = EngineMode,

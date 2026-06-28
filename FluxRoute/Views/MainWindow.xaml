@@ -1330,6 +1330,9 @@
                                     <CheckBox Content="Включить самообучаемый подбор стратегий (оркестратор использует ИИ)"
                                               IsChecked="{Binding AiEnabled}" Margin="0,0,0,10" d:IsLocked="True"/>
 
+                                    <CheckBox Content="Использовать алгоритм UCB1 (Upper Confidence Bound)"
+                                              IsChecked="{Binding UseUcb1}" Margin="0,0,0,10" d:IsLocked="True"/>
+
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10" d:IsLocked="True">
                                         <TextBlock Style="{StaticResource Lbl}" Text="Exploration (‰): " VerticalAlignment="Center" Margin="0,0,8,0" d:IsLocked="True"/>
                                         <TextBox Text="{Binding AiExplorationPermil, UpdateSourceTrigger=PropertyChanged}"

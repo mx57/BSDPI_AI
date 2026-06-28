@@ -50,6 +50,8 @@ public sealed class BanditSelector
         StrategyGenome? best = null;
         double bestScore = double.MinValue;
 
+        var useUcb1 = _aiSettings().UseUcb1;
+
         foreach (var g in effective)
         {
             var entry = _registry.GetOrCreateBandit(g.Id, networkHash);
@@ -59,23 +61,35 @@ public sealed class BanditSelector
             double beta = entry.Beta;
 
             double sampleOrUcb;
-            if (pulls < 1)
+
+            if (useUcb1)
             {
-                var agg = _registry.GetAggregatedBeta(g.Id);
-                var apulls = agg.Alpha + agg.Beta - 2;
-                if (apulls < 0.5)
-                {
-                    var mean = 0.5;
-                    var n = 1.0;
-                    sampleOrUcb = mean + Math.Sqrt(2 * Math.Log(totalT + 1) / n);
-                }
-                else
-                {
-                    sampleOrUcb = SampleBeta(agg.Alpha, agg.Beta);
-                }
+                // UCB1 (Upper Confidence Bound)
+                var n = Math.Max(1.0, pulls);
+                var mean = alpha / (alpha + beta);
+                sampleOrUcb = mean + Math.Sqrt(2 * Math.Log(totalT + 1) / n);
             }
             else
-                sampleOrUcb = SampleBeta(alpha, beta);
+            {
+                // Thompson Sampling
+                if (pulls < 1)
+                {
+                    var agg = _registry.GetAggregatedBeta(g.Id);
+                    var apulls = agg.Alpha + agg.Beta - 2;
+                    if (apulls < 0.5)
+                    {
+                        var mean = 0.5;
+                        var n = 1.0;
+                        sampleOrUcb = mean + Math.Sqrt(2 * Math.Log(totalT + 1) / n);
+                    }
+                    else
+                    {
+                        sampleOrUcb = SampleBeta(agg.Alpha, agg.Beta);
+                    }
+                }
+                else
+                    sampleOrUcb = SampleBeta(alpha, beta);
+            }
 
             if (sampleOrUcb > bestScore)
             {
