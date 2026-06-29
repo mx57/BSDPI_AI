@@ -32,7 +32,12 @@ public sealed class BanditSelector
         if (usable.Count == 0)
             return null;
 
-        if (_rng.NextDouble() * 1000 < explorationPermil)
+        var totalTOnNet = _registry.TotalPullsOnNetwork(networkHash);
+
+        // BOLT ⚡: Adaptive exploration. Reduce exploration as we gain more experience on this network.
+        var adaptiveExploration = explorationPermil / (1.0 + Math.Sqrt(totalTOnNet / 50.0));
+
+        if (_rng.NextDouble() * 1000 < adaptiveExploration)
         {
             usable.Sort((a, b) =>
                 _registry.SumPullsForGenomeOnNetwork(a.Id, networkHash)
@@ -64,9 +69,18 @@ public sealed class BanditSelector
 
             if (useUcb1)
             {
-                // UCB1 (Upper Confidence Bound)
+                // BOLT ⚡: Improved UCB1 with priors (aggregated data) for new genomes on current network
+                double mean;
+                if (pulls < 1)
+                {
+                    var agg = _registry.GetAggregatedBeta(g.Id);
+                    mean = agg.Alpha / (agg.Alpha + agg.Beta);
+                }
+                else
+                {
+                    mean = alpha / (alpha + beta);
+                }
                 var n = Math.Max(1.0, pulls);
-                var mean = alpha / (alpha + beta);
                 sampleOrUcb = mean + Math.Sqrt(2 * Math.Log(totalT + 1) / n);
             }
             else
@@ -132,7 +146,8 @@ public sealed class BanditSelector
                 var pulls = entry.Alpha + entry.Beta - 2;
                 if (pulls < 1) return (g, score: 0.5, latency: 1000.0);
                 var score = entry.Alpha / (entry.Alpha + entry.Beta);
-                var latency = entry.Alpha > 0 ? entry.Alpha / (entry.Alpha + entry.Beta) * 100 : 500;
+                // BOLT ⚡: Fixed Pareto latency calculation to use real AvgLatency.
+                var latency = entry.AvgLatency;
                 return (g, score, latency);
             })
             .ToList();
@@ -144,6 +159,7 @@ public sealed class BanditSelector
             foreach (var other in scored)
             {
                 if (other.g.Id == item.g.Id) continue;
+                // A strategy dominates another if it's better in ALL dimensions and strictly better in at least ONE.
                 if (other.score >= item.score && other.latency <= item.latency &&
                     (other.score > item.score || other.latency < item.latency))
                 {

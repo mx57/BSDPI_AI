@@ -356,7 +356,7 @@ public sealed class AiOrchestratorService : IDisposable
 
         if (result.IsWorking(FailThreshold))
         {
-            _registry.RecordBanditSuccess(current.Id, fp.Hash);
+            _registry.RecordBanditSuccess(current.Id, fp.Hash, avgLat);
             _bandit.RegisterSuccess(current.Id);
             Interlocked.Exchange(ref _consecutiveFailures, 0);
             Notify($"✅ ИИ: «{active.DisplayName}» ок ({result.Score}%).", result: result);
@@ -368,7 +368,7 @@ public sealed class AiOrchestratorService : IDisposable
         }
         else
         {
-            _registry.RecordBanditFailure(current.Id, fp.Hash);
+            _registry.RecordBanditFailure(current.Id, fp.Hash, avgLat);
             _bandit.RegisterFailure(current, failureSig);
             Notify($"⚠️ ИИ: «{active.DisplayName}» {result.Score}% ({result.Summary})", result: result);
             Interlocked.Increment(ref _consecutiveFailures);
@@ -725,7 +725,7 @@ public sealed class AiOrchestratorService : IDisposable
         _history.Append(outcome);
         if (result.IsWorking(FailThreshold))
         {
-            _registry.RecordBanditSuccess(g.Id, fp.Hash);
+            _registry.RecordBanditSuccess(g.Id, fp.Hash, avgLat);
             _bandit.RegisterSuccess(g.Id);
             Notify(isFreshlyEvolved
                 ? $"✅ ИИ: новая стратегия «{g.DisplayName}» ок ({result.Score}%)."
@@ -739,7 +739,7 @@ public sealed class AiOrchestratorService : IDisposable
         }
         else
         {
-            _registry.RecordBanditFailure(g.Id, fp.Hash);
+            _registry.RecordBanditFailure(g.Id, fp.Hash, avgLat);
             _bandit.RegisterFailure(g, failureSig);
             Notify(isFreshlyEvolved
                 ? $"⚠️ ИИ: новая стратегия «{g.DisplayName}» {result.Score}% ({result.Summary})"

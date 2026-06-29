@@ -20,10 +20,10 @@ public sealed class BanditSelectorTests
         reg.Upsert(gWorse);
 
         const string net = "nh";
-        reg.RecordBanditSuccess(gBetter.Id, net);
-        reg.RecordBanditSuccess(gBetter.Id, net);
-        reg.RecordBanditSuccess(gBetter.Id, net);
-        reg.RecordBanditFailure(gWorse.Id, net);
+        reg.RecordBanditSuccess(gBetter.Id, net, 100);
+        reg.RecordBanditSuccess(gBetter.Id, net, 100);
+        reg.RecordBanditSuccess(gBetter.Id, net, 100);
+        reg.RecordBanditFailure(gWorse.Id, net, 100);
 
         var sel = new BanditSelector(reg, aiSettings: null, new Random(42));
         var counts = new Dictionary<Guid, int>
@@ -70,9 +70,9 @@ public sealed class BanditSelectorTests
 
         const string net = "nh";
         // popular has many trials (100 successes, 0 failures) -> mean=1.0, n=100
-        for (int i = 0; i < 100; i++) reg.RecordBanditSuccess(gPopular.Id, net);
+        for (int i = 0; i < 100; i++) reg.RecordBanditSuccess(gPopular.Id, net, 100);
         // rare has very few trials (1 success, 0 failures) -> mean=1.0, n=1
-        reg.RecordBanditSuccess(gRare.Id, net);
+        reg.RecordBanditSuccess(gRare.Id, net, 100);
 
         // UCB1 should favor rare because its exploration bonus is much higher.
         // Popular: 1.0 + sqrt(2*ln(101)/100) ≈ 1.0 + 0.3 = 1.3

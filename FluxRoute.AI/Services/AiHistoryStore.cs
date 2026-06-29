@@ -29,10 +29,6 @@ public sealed class AiHistoryStore
             {
                 _cache.Add(outcome);
             }
-            else
-            {
-                _cache = new List<ProbeOutcome> { outcome };
-            }
         }
     }
 

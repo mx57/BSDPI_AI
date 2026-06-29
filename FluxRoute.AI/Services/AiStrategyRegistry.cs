@@ -10,6 +10,7 @@ public sealed class BanditStateEntry
     public string NetworkHash { get; set; } = "";
     public double Alpha { get; set; } = 1;
     public double Beta { get; set; } = 1;
+    public double AvgLatency { get; set; } = 1000;
 }
 
 public sealed class AiStrategyPersistedModel
@@ -211,34 +212,45 @@ public sealed class AiStrategyRegistry
         }
     }
 
-    public void RecordBanditSuccess(Guid genomeId, string networkHash)
+    public void RecordBanditSuccess(Guid genomeId, string networkHash, double latencyMs)
     {
         lock (_gate)
         {
             if (!_banditLookup.TryGetValue((genomeId, networkHash), out var e))
             {
-                e = new BanditStateEntry { GenomeId = genomeId, NetworkHash = networkHash, Alpha = 1, Beta = 1 };
+                e = new BanditStateEntry { GenomeId = genomeId, NetworkHash = networkHash, Alpha = 1, Beta = 1, AvgLatency = latencyMs };
                 _model.Bandit.Add(e);
                 AddEntryToLookups(e);
             }
 
             e.Alpha += 1;
+            UpdateLatency(e, latencyMs);
         }
     }
 
-    public void RecordBanditFailure(Guid genomeId, string networkHash)
+    public void RecordBanditFailure(Guid genomeId, string networkHash, double latencyMs)
     {
         lock (_gate)
         {
             if (!_banditLookup.TryGetValue((genomeId, networkHash), out var e))
             {
-                e = new BanditStateEntry { GenomeId = genomeId, NetworkHash = networkHash, Alpha = 1, Beta = 1 };
+                e = new BanditStateEntry { GenomeId = genomeId, NetworkHash = networkHash, Alpha = 1, Beta = 1, AvgLatency = latencyMs };
                 _model.Bandit.Add(e);
                 AddEntryToLookups(e);
             }
 
             e.Beta += 1;
+            UpdateLatency(e, latencyMs);
         }
+    }
+
+    private static void UpdateLatency(BanditStateEntry e, double newLat)
+    {
+        if (newLat <= 0) return;
+        // Moving average over ~10 trials
+        const double alpha = 0.2;
+        if (e.AvgLatency >= 999) e.AvgLatency = newLat;
+        else e.AvgLatency = e.AvgLatency * (1 - alpha) + newLat * alpha;
     }
 
     public double SumPullsForGenomeOnNetwork(Guid genomeId, string networkHash)
