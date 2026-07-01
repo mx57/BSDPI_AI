@@ -59,6 +59,6 @@ public sealed class StrategyEvolverTests
         Assert.Equal(StrategyOrigin.Evolved, child!.Origin);
         Assert.Null(child.SourceBatPath);
         Assert.Null(child.BatFileName);
-        Assert.True(reg.GetGenomes().Any(x => x.Id == child.Id));
+        Assert.Contains(reg.GetGenomes(), x => x.Id == child.Id);
     }
 }

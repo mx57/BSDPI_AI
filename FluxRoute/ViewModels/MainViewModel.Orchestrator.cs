@@ -254,18 +254,27 @@ public partial class MainViewModel
         {
             AiStrategyRows.Clear();
             var list = _aiRegistry.GetGenomes().ToList();
+
+            // BOLT ⚡: Group history by genome once to avoid O(N*M) complexity in the UI thread.
+            var historyByGenome = _aiHistoryStore.LoadAll()
+                .GroupBy(o => o.GenomeId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
             var evolved = list.Where(x => x.Origin == StrategyOrigin.Evolved).OrderByDescending(x => x.Generation).ToList();
             var builtin = list.Where(x => x.Origin != StrategyOrigin.Evolved)
                 .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+
             foreach (var g in evolved)
             {
-                var (succ, trials, w) = WilsonStatsForGenome(g);
+                historyByGenome.TryGetValue(g.Id, out var outcomes);
+                var (succ, trials, w) = CalculateWilsonStats(outcomes);
                 AiStrategyRows.Add(new AiStrategyRowVm(_aiRegistry, g, succ, trials, w));
             }
 
             foreach (var g in builtin)
             {
-                var (succ, trials, w) = WilsonStatsForGenome(g);
+                historyByGenome.TryGetValue(g.Id, out var outcomes);
+                var (succ, trials, w) = CalculateWilsonStats(outcomes);
                 AiStrategyRows.Add(new AiStrategyRowVm(_aiRegistry, g, succ, trials, w));
             }
 
@@ -297,9 +306,11 @@ public partial class MainViewModel
         return dispatcher.InvokeAsync(EnsureOnUi).Task;
     }
 
-    private (int successes, int trials, double wilsonLower) WilsonStatsForGenome(StrategyGenome g)
+    private (int successes, int trials, double wilsonLower) CalculateWilsonStats(List<ProbeOutcome>? outcomes)
     {
-        var outcomes = _aiHistoryStore.LoadAll().Where(o => o.GenomeId == g.Id).ToList();
+        if (outcomes == null || outcomes.Count == 0)
+            return (0, 0, 0);
+
         var succ = outcomes.Count(o => o.Score >= 50);
         var trials = outcomes.Count;
         var w = WilsonScore.LowerBound(succ, trials);

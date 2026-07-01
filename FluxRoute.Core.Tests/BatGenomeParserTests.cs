@@ -46,7 +46,7 @@ public sealed class BatGenomeParserTests
         var sig0 = GenomeSignature.Compute(g);
 
         var args = BatMaterializer.BuildWinwsArgs(g);
-        var plan = new WinwsLaunchPlan(Path.Combine(tmp, "bin", "winws.exe"), args, tmp, null);
+        var plan = new WinwsLaunchPlan(Path.Combine(tmp, "bin", "winws.exe"), args, tmp, "");
         var g2 = GenomeParser.FromLaunchPlan(plan, "RT", StrategyOrigin.Builtin);
         Assert.Equal(sig0, GenomeSignature.Compute(g2));
     }

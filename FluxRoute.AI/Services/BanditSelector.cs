@@ -45,31 +45,17 @@ public sealed class BanditSelector
             return usable[0];
         }
 
-        var effective = _aiSettings().ParetoEnabled
-            ? ParetoFront(usable, networkHash)
-            : usable;
-        if (effective.Count == 0) effective = usable;
-
-        var totalT = effective.Sum(g => 1 + _registry.SumPullsForGenomeOnNetwork(g.Id, networkHash));
-
-        StrategyGenome? best = null;
-        double bestScore = double.MinValue;
-
         var useUcb1 = _aiSettings().UseUcb1;
-
-        foreach (var g in effective)
+        var scoredUsable = usable.Select(g =>
         {
             var entry = _registry.GetOrCreateBandit(g.Id, networkHash);
             var pulls = entry.Alpha + entry.Beta - 2;
-
             double alpha = entry.Alpha;
             double beta = entry.Beta;
-
-            double sampleOrUcb;
+            double score;
 
             if (useUcb1)
             {
-                // BOLT ⚡: Improved UCB1 with priors (aggregated data) for new genomes on current network
                 double mean;
                 if (pulls < 1)
                 {
@@ -81,38 +67,34 @@ public sealed class BanditSelector
                     mean = alpha / (alpha + beta);
                 }
                 var n = Math.Max(1.0, pulls);
-                sampleOrUcb = mean + Math.Sqrt(2 * Math.Log(totalT + 1) / n);
+                score = mean + Math.Sqrt(2 * Math.Log(totalTOnNet + 1) / n);
             }
             else
             {
-                // Thompson Sampling
                 if (pulls < 1)
                 {
                     var agg = _registry.GetAggregatedBeta(g.Id);
                     var apulls = agg.Alpha + agg.Beta - 2;
-                    if (apulls < 0.5)
-                    {
-                        var mean = 0.5;
-                        var n = 1.0;
-                        sampleOrUcb = mean + Math.Sqrt(2 * Math.Log(totalT + 1) / n);
-                    }
-                    else
-                    {
-                        sampleOrUcb = SampleBeta(agg.Alpha, agg.Beta);
-                    }
+                    score = apulls < 0.5 ? 0.5 : SampleBeta(agg.Alpha, agg.Beta);
                 }
                 else
-                    sampleOrUcb = SampleBeta(alpha, beta);
+                {
+                    score = SampleBeta(alpha, beta);
+                }
             }
 
-            if (sampleOrUcb > bestScore)
-            {
-                bestScore = sampleOrUcb;
-                best = g;
-            }
+            return (g, score, latency: entry.AvgLatency);
+        }).ToList();
+
+        if (_aiSettings().ParetoEnabled)
+        {
+            var pareto = GetParetoFrontInternal(scoredUsable);
+            // BOLT ⚡: Multi-objective selection. Pick a random strategy from the Pareto front
+            // to properly balance exploration-aware success vs. latency.
+            return pareto[_rng.Next(pareto.Count)].g;
         }
 
-        return best;
+        return scoredUsable.OrderByDescending(x => x.score).First().g;
     }
 
     public StrategyGenome? BestKnownForNetwork(IReadOnlyList<StrategyGenome> candidates, string networkHash)
@@ -146,12 +128,17 @@ public sealed class BanditSelector
                 var pulls = entry.Alpha + entry.Beta - 2;
                 if (pulls < 1) return (g, score: 0.5, latency: 1000.0);
                 var score = entry.Alpha / (entry.Alpha + entry.Beta);
-                // BOLT ⚡: Fixed Pareto latency calculation to use real AvgLatency.
                 var latency = entry.AvgLatency;
                 return (g, score, latency);
             })
             .ToList();
 
+        return GetParetoFrontInternal(scored).Select(x => x.g).ToList();
+    }
+
+    private List<(StrategyGenome g, double score, double latency)> GetParetoFrontInternal(
+        IReadOnlyList<(StrategyGenome g, double score, double latency)> scored)
+    {
         var pareto = new List<(StrategyGenome g, double score, double latency)>();
         foreach (var item in scored)
         {
@@ -159,7 +146,8 @@ public sealed class BanditSelector
             foreach (var other in scored)
             {
                 if (other.g.Id == item.g.Id) continue;
-                // A strategy dominates another if it's better in ALL dimensions and strictly better in at least ONE.
+                // BOLT ⚡: Pareto now uses exploration-aware scores (UCB or Samples) when called from Pick(),
+                // preventing under-explored strategies from being prematurely discarded.
                 if (other.score >= item.score && other.latency <= item.latency &&
                     (other.score > item.score || other.latency < item.latency))
                 {
@@ -170,7 +158,7 @@ public sealed class BanditSelector
             if (!dominated) pareto.Add(item);
         }
 
-        return pareto.Select(x => x.g).ToList();
+        return pareto;
     }
 
     public void RegisterSuccess(Guid genomeId)
