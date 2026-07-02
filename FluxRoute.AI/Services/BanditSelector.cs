@@ -39,10 +39,21 @@ public sealed class BanditSelector
 
         if (_rng.NextDouble() * 1000 < adaptiveExploration)
         {
-            usable.Sort((a, b) =>
-                _registry.SumPullsForGenomeOnNetwork(a.Id, networkHash)
-                    .CompareTo(_registry.SumPullsForGenomeOnNetwork(b.Id, networkHash)));
-            return usable[0];
+            // BOLT ⚡: O(N) linear search for the strategy with minimum trials,
+            // replacing O(N log N) Sort() for better performance in the exploration branch.
+            StrategyGenome? minPullsGenome = null;
+            double minPulls = double.MaxValue;
+
+            foreach (var g in usable)
+            {
+                var pulls = _registry.SumPullsForGenomeOnNetwork(g.Id, networkHash);
+                if (pulls < minPulls)
+                {
+                    minPulls = pulls;
+                    minPullsGenome = g;
+                }
+            }
+            return minPullsGenome;
         }
 
         var useUcb1 = _aiSettings().UseUcb1;

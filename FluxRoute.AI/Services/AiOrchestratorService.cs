@@ -12,9 +12,20 @@ public sealed class AiOrchestratorService : IDisposable
     public TimeSpan CheckInterval { get; set; } = TimeSpan.FromMinutes(20);
     public double FailThreshold { get; set; } = 0.5;
     public int RequiredFailuresBeforeSwitch { get; set; } = 2;
-    public HashSet<string> EnabledSites { get; set; } =
-        ["YouTube", "Discord", "Google", "Twitch", "Instagram", "Telegram"];
-    public List<TargetEntry> UserSiteTargets { get; set; } = [];
+
+    private HashSet<string> _enabledSites = ["YouTube", "Discord", "Google", "Twitch", "Instagram", "Telegram"];
+    public HashSet<string> EnabledSites
+    {
+        get => _enabledSites;
+        set { _enabledSites = value; _targetsDirty = true; }
+    }
+
+    private List<TargetEntry> _userSiteTargets = [];
+    public List<TargetEntry> UserSiteTargets
+    {
+        get => _userSiteTargets;
+        set { _userSiteTargets = value; _targetsDirty = true; }
+    }
 
     public bool IsRunning => _cts is not null;
     public DateTimeOffset? NextCheckAt { get; private set; }
@@ -46,7 +57,9 @@ public sealed class AiOrchestratorService : IDisposable
     private int _probeCountSinceMtuTune;
     private DateTimeOffset _lastEvolutionUtc = DateTimeOffset.MinValue;
     private List<TargetEntry>? _cachedCustomTargets;
+    private List<TargetEntry>? _finalTargetsCache;
     private DateTime _lastTargetsWriteTime = DateTime.MinValue;
+    private bool _targetsDirty = true;
     private volatile bool _networkDirty;
     private StrategyGenome? _currentGenome;
     private readonly ConcurrentDictionary<string, (int score, DateTimeOffset at)> _networkProbeCache = new();
@@ -772,6 +785,8 @@ public sealed class AiOrchestratorService : IDisposable
             return;
 
         var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "service.bat", "service,.bat" };
+        var seenBuiltinIds = new HashSet<Guid>();
+        bool anyChanged = false;
 
         foreach (var bat in Directory.EnumerateFiles(engineDir, "*.bat", SearchOption.TopDirectoryOnly))
         {
@@ -787,6 +802,7 @@ public sealed class AiOrchestratorService : IDisposable
 
             var relativePath = Path.GetRelativePath(engineDir, bat).Replace('\\', '/');
             genome.Id = StableGuid.FromString("builtin:" + relativePath);
+            seenBuiltinIds.Add(genome.Id);
 
             genome.SourceBatPath = bat;
             genome.BatFileName = fn;
@@ -794,15 +810,34 @@ public sealed class AiOrchestratorService : IDisposable
             var existing = _registry.GetById(genome.Id);
             if (existing is not null)
             {
-                genome.OrchestratorEnabled = existing.OrchestratorEnabled;
-                genome.LastVerificationScore = existing.LastVerificationScore;
-                genome.LastVerifiedAt = existing.LastVerifiedAt;
+                if (existing.Signature != genome.Signature || existing.DisplayName != genome.DisplayName)
+                {
+                    genome.OrchestratorEnabled = existing.OrchestratorEnabled;
+                    genome.LastVerificationScore = existing.LastVerificationScore;
+                    genome.LastVerifiedAt = existing.LastVerifiedAt;
+                    _registry.Upsert(genome);
+                    anyChanged = true;
+                }
             }
-
-            _registry.Upsert(genome);
+            else
+            {
+                _registry.Upsert(genome);
+                anyChanged = true;
+            }
         }
 
-        _registry.Save();
+        var toRemove = _registry.GetGenomes()
+            .Where(g => g.Origin == StrategyOrigin.Builtin && !seenBuiltinIds.Contains(g.Id))
+            .ToList();
+
+        foreach (var g in toRemove)
+        {
+            _registry.Remove(g.Id);
+            anyChanged = true;
+        }
+
+        if (anyChanged)
+            _registry.Save();
     }
 
     private void SaveWarpConfig(StrategyGenome g)
@@ -842,28 +877,27 @@ public sealed class AiOrchestratorService : IDisposable
     private List<TargetEntry> BuildTargets()
     {
         var path = _getTargetsPath();
-        List<TargetEntry> customTargets;
+        bool customFileChanged = false;
 
         try
         {
             var lastWrite = File.Exists(path) ? File.GetLastWriteTime(path) : DateTime.MinValue;
             if (_cachedCustomTargets == null || lastWrite > _lastTargetsWriteTime)
             {
-                customTargets = TargetEntry.ParseFile(path);
-                _cachedCustomTargets = customTargets;
+                _cachedCustomTargets = TargetEntry.ParseFile(path);
                 _lastTargetsWriteTime = lastWrite;
-            }
-            else
-            {
-                customTargets = _cachedCustomTargets;
+                customFileChanged = true;
             }
         }
         catch
         {
-            customTargets = _cachedCustomTargets ?? [];
+            _cachedCustomTargets ??= [];
         }
 
-        var targets = new List<TargetEntry>(customTargets);
+        if (!_targetsDirty && !customFileChanged && _finalTargetsCache != null)
+            return _finalTargetsCache;
+
+        var targets = new List<TargetEntry>(_cachedCustomTargets ?? []);
 
         foreach (var site in EnabledSites)
         {
@@ -873,11 +907,14 @@ public sealed class AiOrchestratorService : IDisposable
 
         targets.AddRange(UserSiteTargets);
 
-        return targets
+        _finalTargetsCache = targets
             .Where(x => !string.IsNullOrWhiteSpace(x.Value))
             .GroupBy(x => $"{x.Kind}|{x.Key}|{x.Value}", StringComparer.OrdinalIgnoreCase)
             .Select(x => x.First())
             .ToList();
+
+        _targetsDirty = false;
+        return _finalTargetsCache;
     }
 
     private void Notify(string msg, bool switched = false, string? newProfile = null,
