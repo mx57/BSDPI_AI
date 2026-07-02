@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using FluxRoute.AI.Models;
 
@@ -105,5 +107,45 @@ public sealed class AiHistoryStore
 
             _cache = [.. kept];
         }
+    }
+
+    /// <summary>
+    /// Generates a CSV string from the AI history.
+    /// BOLT ⚡: Uses InvariantCulture for numbers to prevent CSV corruption in locales where comma is a decimal separator.
+    /// </summary>
+    public string GetHistoryCsv(Func<Guid, string> getDisplayName)
+    {
+        var all = LoadAll().OrderByDescending(x => x.Timestamp).ToList();
+        var sb = new StringBuilder();
+        sb.AppendLine("Timestamp,Strategy,Network,Score,SuccessRate,LatencyMs,Stable,FailedTargets,FailureSig");
+
+        foreach (var o in all)
+        {
+            var strategy = getDisplayName(o.GenomeId);
+            var failedTargets = string.Join("|", o.FailedTargetKeys);
+
+            sb.Append(o.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")).Append(',');
+            sb.Append(CsvEscape(strategy)).Append(',');
+            sb.Append(CsvEscape(o.NetworkHash)).Append(',');
+            sb.Append(o.Score).Append(',');
+            sb.Append(o.SuccessRate.ToString("F2", CultureInfo.InvariantCulture)).Append(',');
+            sb.Append(o.AvgLatencyMs.ToString("F1", CultureInfo.InvariantCulture)).Append(',');
+            sb.Append(o.ProcessStable).Append(',');
+            sb.Append(CsvEscape(failedTargets)).Append(',');
+            sb.Append(CsvEscape(o.FailureSignature ?? ""));
+            sb.AppendLine();
+        }
+
+        return sb.ToString();
+    }
+
+    private static string CsvEscape(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+        {
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 }

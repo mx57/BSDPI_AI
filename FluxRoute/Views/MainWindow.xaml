@@ -1379,6 +1379,9 @@
                                         <Button Content="↺ Сброс модели" Style="{StaticResource TermBtn}"
                                                 Margin="0,0,10,0" Command="{Binding ResetAiModelCommand}" d:IsLocked="True"
                                                 ToolTip="Сбросить накопленные данные модели ИИ" AutomationProperties.Name="Сбросить модель ИИ"/>
+                                        <Button Content="📊 Экспорт CSV" Style="{StaticResource TermBtn}"
+                                                Margin="0,0,10,0" Command="{Binding ExportHistoryCommand}" d:IsLocked="True"
+                                                ToolTip="Экспортировать историю проверок в CSV" AutomationProperties.Name="Экспорт истории ИИ"/>
                                         <Button Content="📁 ai-evolved" Style="{StaticResource TermBtn}"
                                                 Command="{Binding OpenAiEvolvedFolderCommand}" d:IsLocked="True"
                                                 ToolTip="Открыть папку с эволюционировавшими стратегиями" AutomationProperties.Name="Открыть папку ИИ стратегий"/>

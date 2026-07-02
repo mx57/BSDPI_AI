@@ -41,6 +41,45 @@ public sealed class AiHistoryStoreTests
     }
 
     [Fact]
+    public void GetHistoryCsv_ReturnsValidCsv()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "fr-hist-csv-" + Guid.NewGuid().ToString("N") + ".jsonl");
+        try
+        {
+            var store = new AiHistoryStore(path);
+            var gId = Guid.NewGuid();
+            var outcome = new ProbeOutcome
+            {
+                GenomeId = gId,
+                NetworkHash = "net-hash",
+                Score = 95,
+                SuccessRate = 0.95,
+                AvgLatencyMs = 123.4,
+                ProcessStable = true,
+                FailedTargetKeys = ["site1", "site2"],
+                FailureSignature = "none"
+            };
+            store.Append(outcome);
+
+            var csv = store.GetHistoryCsv(id => id == gId ? "MyStrategy" : "Unknown");
+
+            Assert.Contains("Timestamp,Strategy,Network,Score,SuccessRate,LatencyMs,Stable,FailedTargets,FailureSig", csv);
+            Assert.Contains("MyStrategy", csv);
+            Assert.Contains("net-hash", csv);
+            Assert.Contains("95", csv);
+            Assert.Contains("0.95", csv);
+            Assert.Contains("123.4", csv);
+            Assert.Contains("True", csv);
+            Assert.Contains("site1|site2", csv);
+            Assert.Contains("none", csv);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void LoadAll_HandlesCorruptLines()
     {
         var path = Path.Combine(Path.GetTempPath(), "fr-hist-corrupt-" + Guid.NewGuid().ToString("N") + ".jsonl");
