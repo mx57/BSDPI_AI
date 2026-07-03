@@ -282,6 +282,7 @@ public partial class MainViewModel : ObservableObject
         8 => "ЛОГИ",
         9 => "BYEDPI",
         10 => "WARP",
+        11 => "КОНСТРУКТОР",
         _ => ""
     };
     partial void OnSelectedTabIndexChanged(int value)
