@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.AI.Models;
@@ -211,6 +212,36 @@ public partial class MainViewModel
         RefreshAiDashboard();
         RebuildAiStrategyRows();
         Logs.Add("[ИИ] Модель сброшена.");
+    }
+
+    /// <summary>
+    /// Exports the AI history to a CSV file.
+    /// BOLT ⚡: Uses UTF-8 with BOM for Excel compatibility.
+    /// </summary>
+    [RelayCommand]
+    private void ExportHistory()
+    {
+        try
+        {
+            var csv = _aiHistoryStore.GetHistoryCsv(id => _aiRegistry.GetById(id)?.DisplayName ?? id.ToString());
+
+            var sfd = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                FileName = $"fluxroute-ai-history-{DateTime.Now:yyyyMMdd-HHmm}.csv",
+                Title = "Экспорт истории ИИ"
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+                File.WriteAllText(sfd.FileName, csv, new UTF8Encoding(true));
+                Logs.Add($"[ИИ] История экспортирована в {Path.GetFileName(sfd.FileName)}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"[ИИ] Ошибка экспорта: {ex.Message}");
+        }
     }
 
     [RelayCommand]
