@@ -33,10 +33,40 @@ public sealed class BatMaterializer
         var warpDir = Path.Combine(engineDir, "warp");
         Directory.CreateDirectory(warpDir);
 
+        var p = g.ToEngineProfile();
         var sb = new StringBuilder();
         sb.AppendLine("@echo off");
         sb.AppendLine($"cd /d \"{warpDir}\"");
-        sb.AppendLine("start /min \"\" warp-plus.exe -b 127.0.0.1:8086");
+
+        var cmd = new StringBuilder("start /min \"\" warp-plus.exe");
+        cmd.Append($" -b 127.0.0.1:{p.SocksPort}");
+
+        if (!string.IsNullOrWhiteSpace(p.WarpConfig))
+        {
+            try
+            {
+                File.WriteAllText(Path.Combine(warpDir, "warp.conf"), p.WarpConfig, new UTF8Encoding(false));
+                cmd.Append(" --wgconf \"warp.conf\"");
+            }
+            catch { /* Ignore IO errors in materializer */ }
+        }
+
+        if (p.MTU.HasValue) cmd.Append($" --mtu {p.MTU.Value}");
+        if (p.GoolEnabled) cmd.Append(" --gool");
+        if (p.PsiphonEnabled)
+        {
+            cmd.Append(" --cfon");
+            if (!string.IsNullOrWhiteSpace(p.PsiphonCountry))
+                cmd.Append(" --country ").Append(QuoteIfNeeded(p.PsiphonCountry));
+        }
+        if (p.ScanEnabled) cmd.Append(" --scan");
+        if (!string.IsNullOrWhiteSpace(p.Reserved))
+            cmd.Append(" --reserved ").Append(QuoteIfNeeded(p.Reserved));
+
+        foreach (var extra in p.ExtraArgs)
+            if (!string.IsNullOrWhiteSpace(extra)) cmd.Append(' ').Append(QuoteIfNeeded(extra));
+
+        sb.AppendLine(cmd.ToString());
         sb.AppendLine("exit");
 
         var dir = Path.Combine(engineDir, "ai-evolved");
@@ -129,6 +159,24 @@ public sealed class BatMaterializer
 
         if (g.AutoTtl)
             list.Add("--dpi-desync-autottl");
+
+        if (!string.IsNullOrWhiteSpace(g.DesyncAnyProtocol))
+        {
+            list.Add("--dpi-desync-any-protocol");
+            list.Add(g.DesyncAnyProtocol);
+        }
+
+        if (!string.IsNullOrWhiteSpace(g.DesyncFooling))
+        {
+            list.Add("--dpi-desync-fooling");
+            list.Add(g.DesyncFooling);
+        }
+
+        if (!string.IsNullOrWhiteSpace(g.FakeResend))
+        {
+            list.Add("--dpi-desync-fake-resend");
+            list.Add(g.FakeResend);
+        }
 
         if (g.RepeatCount is not null)
         {

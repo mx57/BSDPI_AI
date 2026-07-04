@@ -92,7 +92,7 @@ public sealed class WarpEngine : IDpiEngine
                 _process = process;
                 ProcessInfo = new EngineProcessInfo(
                     process.Id, "warp-plus.exe", EngineStatus.Running,
-                    DateTimeOffset.Now, 8086); // warp-plus default bind port
+                    DateTimeOffset.Now, profile.SocksPort);
                 Status = EngineStatus.Running;
             }
             NotifyStatus();
@@ -153,7 +153,7 @@ public sealed class WarpEngine : IDpiEngine
 
         // Basic flags for warp-plus
         list.Add("-b");
-        list.Add("127.0.0.1:8086"); // Default bind for internal proxy use
+        list.Add($"127.0.0.1:{p.SocksPort}");
 
         if (!string.IsNullOrWhiteSpace(p.WarpConfig))
         {
