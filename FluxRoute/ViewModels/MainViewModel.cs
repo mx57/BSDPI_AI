@@ -374,6 +374,7 @@ public partial class MainViewModel : ObservableObject
     private readonly AiOrchestratorService _aiOrchestrator;
     private readonly AiStrategyRegistry _aiRegistry;
     private readonly AiHistoryStore _aiHistoryStore;
+    private readonly BanditSelector _aiBandit;
     private readonly NetworkFingerprintProvider _aiFingerprints;
     private readonly DispatcherTimer _orchestratorUiTimer = new(DispatcherPriority.Render) { Interval = TimeSpan.FromSeconds(1) };
 
@@ -471,6 +472,7 @@ public partial class MainViewModel : ObservableObject
         _connectivity = connectivity;
         _aiRegistry = aiRegistry;
         _aiHistoryStore = aiHistoryStore;
+        _aiBandit = aiBandit;
         _aiFingerprints = aiFingerprints;
 
         // ── Инициализация feature ViewModels ──

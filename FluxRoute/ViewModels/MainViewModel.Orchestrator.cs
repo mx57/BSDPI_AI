@@ -32,6 +32,10 @@ public sealed partial class AiStrategyRowVm : ObservableObject
     [ObservableProperty] private string verificationToolTip = "";
     [ObservableProperty] private bool isEnabled;
 
+    [ObservableProperty] private bool isPareto;
+    [ObservableProperty] private string localStats = "";
+    [ObservableProperty] private string avgLatencyText = "";
+
     public AiStrategyRowVm(AiStrategyRegistry registry, StrategyGenome g, int successes, int trials, double wilsonLower)
     {
         _registry = registry;
@@ -254,28 +258,22 @@ public partial class MainViewModel
         {
             AiStrategyRows.Clear();
             var list = _aiRegistry.GetGenomes().ToList();
-
-            // BOLT ⚡: Group history by genome once to avoid O(N*M) complexity in the UI thread.
-            var historyByGenome = _aiHistoryStore.LoadAll()
-                .GroupBy(o => o.GenomeId)
-                .ToDictionary(g => g.Key, g => g.ToList());
+            var fp = _aiFingerprints.Capture();
 
             var evolved = list.Where(x => x.Origin == StrategyOrigin.Evolved).OrderByDescending(x => x.Generation).ToList();
             var builtin = list.Where(x => x.Origin != StrategyOrigin.Evolved)
                 .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
 
+            var paretoSet = new HashSet<Guid>(_aiBandit.ParetoFront(list, fp.Hash).Select(g => g.Id));
+
             foreach (var g in evolved)
             {
-                historyByGenome.TryGetValue(g.Id, out var outcomes);
-                var (succ, trials, w) = CalculateWilsonStats(outcomes);
-                AiStrategyRows.Add(new AiStrategyRowVm(_aiRegistry, g, succ, trials, w));
+                AiStrategyRows.Add(CreateRow(g, fp.Hash, paretoSet.Contains(g.Id)));
             }
 
             foreach (var g in builtin)
             {
-                historyByGenome.TryGetValue(g.Id, out var outcomes);
-                var (succ, trials, w) = CalculateWilsonStats(outcomes);
-                AiStrategyRows.Add(new AiStrategyRowVm(_aiRegistry, g, succ, trials, w));
+                AiStrategyRows.Add(CreateRow(g, fp.Hash, paretoSet.Contains(g.Id)));
             }
 
             OnPropertyChanged(nameof(AiStrategyRowCount));
@@ -283,6 +281,34 @@ public partial class MainViewModel
         catch
         {
         }
+    }
+
+    private AiStrategyRowVm CreateRow(StrategyGenome g, string networkHash, bool isPareto)
+    {
+        var (succ, trials, w) = _aiRegistry.GetAggregatedBeta(g.Id) switch
+        {
+            var (alpha, beta) => ((int)alpha - 1, (int)(alpha + beta) - 2, WilsonScore.LowerBound((int)alpha - 1, (int)(alpha + beta) - 2))
+        };
+
+        var row = new AiStrategyRowVm(_aiRegistry, g, succ, trials, w);
+        row.IsPareto = isPareto;
+
+        var bandit = _aiRegistry.GetOrCreateBandit(g.Id, networkHash);
+        var lSucc = (int)bandit.Alpha - 1;
+        var lTrials = (int)(bandit.Alpha + bandit.Beta) - 2;
+
+        if (lTrials > 0)
+        {
+            row.LocalStats = $"L: {(lSucc * 100.0 / lTrials):0}% ({lTrials})";
+            row.AvgLatencyText = $"{bandit.AvgLatency:0} ms";
+        }
+        else
+        {
+            row.LocalStats = "L: —";
+            row.AvgLatencyText = "—";
+        }
+
+        return row;
     }
 
     private Task EnsureProtectionRunningAsync()
@@ -306,16 +332,6 @@ public partial class MainViewModel
         return dispatcher.InvokeAsync(EnsureOnUi).Task;
     }
 
-    private (int successes, int trials, double wilsonLower) CalculateWilsonStats(List<ProbeOutcome>? outcomes)
-    {
-        if (outcomes == null || outcomes.Count == 0)
-            return (0, 0, 0);
-
-        var succ = outcomes.Count(o => o.Score >= 50);
-        var trials = outcomes.Count;
-        var w = WilsonScore.LowerBound(succ, trials);
-        return (succ, trials, w);
-    }
 
     [RelayCommand]
     private void DeleteAiStrategy(AiStrategyRowVm? row)

@@ -1202,11 +1202,21 @@
                                                                         <Border Background="#238636" CornerRadius="3" Padding="4,1" Margin="6,0,0,0" VerticalAlignment="Center">
                                                                             <TextBlock Text="{Binding EngineType}" FontSize="9" Foreground="White" FontWeight="Bold"/>
                                                                         </Border>
+                                                                        <Border Background="#F2C744" CornerRadius="3" Padding="4,1" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                                                Visibility="{Binding IsPareto, Converter={StaticResource BoolToVis}}">
+                                                                            <TextBlock Text="Pareto" FontSize="9" Foreground="#161B22" FontWeight="Bold"/>
+                                                                        </Border>
                                                                     </StackPanel>
                                                                     <TextBlock Text="{Binding OriginTag}" FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" d:IsLocked="True"/>
                                                                 </StackPanel>
-                                                                <TextBlock Grid.Column="2" Text="{Binding WilsonText}" ToolTip="{Binding WilsonToolTip}" FontFamily="Segoe UI" Foreground="#4FC3F7" FontSize="12" VerticalAlignment="Center" Margin="8,0,8,0" d:IsLocked="True"/>
-                                                                <TextBlock Grid.Column="3" Text="{Binding VerificationText}" ToolTip="{Binding VerificationToolTip}" FontFamily="Segoe UI" Foreground="#79C0FF" FontSize="12" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                                <StackPanel Grid.Column="2" Orientation="Vertical" VerticalAlignment="Center" Margin="8,0">
+                                                                    <TextBlock Text="{Binding WilsonText}" ToolTip="{Binding WilsonToolTip}" FontFamily="Segoe UI" Foreground="#4FC3F7" FontSize="12" d:IsLocked="True"/>
+                                                                    <TextBlock Text="{Binding LocalStats}" ToolTip="Статистика для текущей сети" FontFamily="Segoe UI" Foreground="#8B949E" FontSize="10" d:IsLocked="True"/>
+                                                                </StackPanel>
+                                                                <StackPanel Grid.Column="3" Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                                                    <TextBlock Text="{Binding VerificationText}" ToolTip="{Binding VerificationToolTip}" FontFamily="Segoe UI" Foreground="#79C0FF" FontSize="12" d:IsLocked="True"/>
+                                                                    <TextBlock Text="{Binding AvgLatencyText}" ToolTip="Средняя задержка (локально)" FontFamily="Segoe UI" Foreground="#8B949E" FontSize="10" d:IsLocked="True"/>
+                                                                </StackPanel>
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
@@ -1417,11 +1427,21 @@
                                                                         <Border Background="#238636" CornerRadius="3" Padding="4,1" Margin="6,0,0,0" VerticalAlignment="Center">
                                                                             <TextBlock Text="{Binding EngineType}" FontSize="9" Foreground="White" FontWeight="Bold"/>
                                                                         </Border>
+                                                                        <Border Background="#F2C744" CornerRadius="3" Padding="4,1" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                                                Visibility="{Binding IsPareto, Converter={StaticResource BoolToVis}}">
+                                                                            <TextBlock Text="Pareto" FontSize="9" Foreground="#161B22" FontWeight="Bold"/>
+                                                                        </Border>
                                                                     </StackPanel>
                                                                     <TextBlock Text="{Binding OriginTag}" FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" d:IsLocked="True"/>
                                                                 </StackPanel>
-                                                                <TextBlock Grid.Column="1" Text="{Binding WilsonText}" ToolTip="{Binding WilsonToolTip}" FontFamily="Segoe UI" Foreground="#4FC3F7" FontSize="12" VerticalAlignment="Center" Margin="8,0,8,0" d:IsLocked="True"/>
-                                                                <TextBlock Grid.Column="2" Text="{Binding VerificationText}" ToolTip="{Binding VerificationToolTip}" FontFamily="Segoe UI" Foreground="#79C0FF" FontSize="12" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                                <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center" Margin="8,0">
+                                                                    <TextBlock Text="{Binding WilsonText}" ToolTip="{Binding WilsonToolTip}" FontFamily="Segoe UI" Foreground="#4FC3F7" FontSize="12" d:IsLocked="True"/>
+                                                                    <TextBlock Text="{Binding LocalStats}" ToolTip="Статистика для текущей сети" FontFamily="Segoe UI" Foreground="#8B949E" FontSize="10" d:IsLocked="True"/>
+                                                                </StackPanel>
+                                                                <StackPanel Grid.Column="2" Orientation="Vertical" VerticalAlignment="Center" Margin="8,0">
+                                                                    <TextBlock Text="{Binding VerificationText}" ToolTip="{Binding VerificationToolTip}" FontFamily="Segoe UI" Foreground="#79C0FF" FontSize="12" d:IsLocked="True"/>
+                                                                    <TextBlock Text="{Binding AvgLatencyText}" ToolTip="Средняя задержка (локально)" FontFamily="Segoe UI" Foreground="#8B949E" FontSize="10" d:IsLocked="True"/>
+                                                                </StackPanel>
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
