@@ -128,77 +128,7 @@ public sealed class BatMaterializer
 
     public static IReadOnlyList<string> BuildWinwsArgs(StrategyGenome g)
     {
-        var list = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(g.FilterTcp)) { list.Add("--filter-tcp"); list.Add(g.FilterTcp); }
-        if (!string.IsNullOrWhiteSpace(g.FilterUdp)) { list.Add("--filter-udp"); list.Add(g.FilterUdp); }
-        list.Add("--dpi-desync"); list.Add(g.DesyncMode);
-
-        if (g.SplitPosSemantic is not null)
-        {
-            list.Add("--dpi-desync-split-pos");
-            list.Add(g.SplitPosSemantic);
-        }
-        else if (g.SplitPos is not null)
-        {
-            list.Add("--dpi-desync-split-pos");
-            list.Add(g.SplitPos.Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        if (!string.IsNullOrWhiteSpace(g.FakeTlsMod))
-        {
-            list.Add("--dpi-desync-fake-tls-mod");
-            list.Add(g.FakeTlsMod);
-        }
-
-        if (g.FakeTtl is not null)
-        {
-            list.Add("--dpi-desync-ttl");
-            list.Add(g.FakeTtl.Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        if (g.AutoTtl)
-            list.Add("--dpi-desync-autottl");
-
-        if (!string.IsNullOrWhiteSpace(g.DesyncAnyProtocol))
-        {
-            list.Add("--dpi-desync-any-protocol");
-            list.Add(g.DesyncAnyProtocol);
-        }
-
-        if (!string.IsNullOrWhiteSpace(g.DesyncFooling))
-        {
-            list.Add("--dpi-desync-fooling");
-            list.Add(g.DesyncFooling);
-        }
-
-        if (!string.IsNullOrWhiteSpace(g.FakeResend))
-        {
-            list.Add("--dpi-desync-fake-resend");
-            list.Add(g.FakeResend);
-        }
-
-        if (g.RepeatCount is not null)
-        {
-            list.Add("--dpi-desync-repeats");
-            list.Add(g.RepeatCount.Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        if (!string.IsNullOrWhiteSpace(g.Hostlist))
-        {
-            list.Add("--hostlist");
-            list.Add(g.Hostlist);
-        }
-
-        list.Add("--new");
-
-        foreach (var x in g.ExtraArgs)
-        {
-            if (!string.IsNullOrWhiteSpace(x))
-                list.Add(x);
-        }
-
-        return list;
+        return ZapretEngine.BuildWinwsArgs(g.ToEngineProfile());
     }
 
     private static (string GameFilter, string Tcp, string Udp) ReadGameFilter(string engineDir)

@@ -139,7 +139,7 @@ public sealed class ZapretEngine : IDpiEngine
         }
     }
 
-    private static IReadOnlyList<string> BuildWinwsArgs(EngineProfile p)
+    public static IReadOnlyList<string> BuildWinwsArgs(EngineProfile p)
     {
         var list = new List<string>();
         if (!string.IsNullOrWhiteSpace(p.FilterTcp)) { list.Add("--filter-tcp"); list.Add(p.FilterTcp); }
@@ -157,6 +157,36 @@ public sealed class ZapretEngine : IDpiEngine
             list.Add(p.SplitPos);
         }
 
+        if (!string.IsNullOrWhiteSpace(p.DisorderPos))
+        {
+            list.Add("--dpi-desync-disorder-pos");
+            list.Add(p.DisorderPos);
+        }
+
+        if (!string.IsNullOrWhiteSpace(p.FakePos))
+        {
+            list.Add("--dpi-desync-fake-pos");
+            list.Add(p.FakePos);
+        }
+
+        if (!string.IsNullOrWhiteSpace(p.OobPos))
+        {
+            list.Add("--dpi-desync-oob-pos");
+            list.Add(p.OobPos);
+        }
+
+        if (!string.IsNullOrWhiteSpace(p.DisoobPos))
+        {
+            list.Add("--dpi-desync-disoob-pos");
+            list.Add(p.DisoobPos);
+        }
+
+        if (!string.IsNullOrWhiteSpace(p.TlsrecPos))
+        {
+            list.Add("--dpi-desync-tlsrec-pos");
+            list.Add(p.TlsrecPos);
+        }
+
         if (!string.IsNullOrWhiteSpace(p.FakeTlsMod))
         {
             list.Add("--dpi-desync-fake-tls-mod");
@@ -168,6 +198,9 @@ public sealed class ZapretEngine : IDpiEngine
             list.Add("--dpi-desync-ttl");
             list.Add(p.FakeTtl.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
+
+        if (p.AutoTtl)
+            list.Add("--dpi-desync-autottl");
 
         if (p.RepeatCount is not null)
         {
