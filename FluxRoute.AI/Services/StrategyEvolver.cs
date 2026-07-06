@@ -18,6 +18,8 @@ public sealed class StrategyEvolver
     private static readonly string[] ModHttpCandidates = ["hcsmix", "dcsmix", "rmspace", "hcsmix,dcsmix", "hcsmix,rmspace"];
     private static readonly string[] FoolingCandidates = ["md5sig", "badseq", "datanoack", "hopbyhop", "hopbyhop2", "badsum"];
     private static readonly string[] AnyProtocolCandidates = ["0", "1"];
+    private static readonly string[] FakeResendCandidates = ["orig", "proxy", "null"];
+    private static readonly int[] RepeatCountCandidates = [1, 2, 3, 5, 10];
     private static readonly string[] PsiphonCountries = ["AT", "AU", "BE", "BG", "CA", "CH", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GB", "HR", "HU", "IE", "IN", "IT", "JP", "LV", "NL", "NO", "PL", "PT", "RO", "RS", "SE", "SG", "SK", "US"];
 
     private readonly AiStrategyRegistry _registry;
@@ -278,6 +280,18 @@ public sealed class StrategyEvolver
                 g.DesyncAnyProtocol = AnyProtocolCandidates[_rng.Next(AnyProtocolCandidates.Length)];
                 break;
             case 7:
+                g.FakeResend = FakeResendCandidates[_rng.Next(FakeResendCandidates.Length)];
+                break;
+            case 8:
+                g.RepeatCount = RepeatCountCandidates[_rng.Next(RepeatCountCandidates.Length)];
+                break;
+            case 9:
+                g.DisorderPos = DisorderPosCandidates[_rng.Next(DisorderPosCandidates.Length)];
+                break;
+            case 10:
+                g.FakePos = FakePosCandidates[_rng.Next(FakePosCandidates.Length)];
+                break;
+            case 11:
                 g.EngineType = DpiEngineType.ByeDpi;
                 g.SplitPos = null;
                 g.SplitPosSemantic = null;

@@ -62,6 +62,9 @@ public static class StrategyGenomeValidator
         if (!string.IsNullOrEmpty(g.FakeTlsMod) && !FakeModes.Contains(g.DesyncMode.ToLowerInvariant()))
             g.FakeTlsMod = null;
 
+        if (!string.IsNullOrEmpty(g.FakeResend) && !FakeModes.Contains(g.DesyncMode.ToLowerInvariant()))
+            g.FakeResend = null;
+
         if (g.FakeTtl is < 1 or > 128)
             g.FakeTtl = null;
     }

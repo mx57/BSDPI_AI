@@ -82,6 +82,7 @@ public sealed class StrategyGenome
             DisoobPos = DisoobPos,
             TlsrecPos = TlsrecPos,
             FakeTtl = FakeTtl,
+            AutoTtl = AutoTtl,
             Md5sig = Md5sig,
             FakeTlsMod = FakeTlsMod,
             FakeSni = FakeSni,

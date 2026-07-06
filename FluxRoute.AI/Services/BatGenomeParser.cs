@@ -9,7 +9,10 @@ public static class BatGenomeParser
     private static readonly HashSet<string> KnownPrefixes =
     [
         "--filter-tcp", "--filter-udp", "--dpi-desync", "--dpi-desync-split-pos",
+        "--dpi-desync-disorder-pos", "--dpi-desync-fake-pos", "--dpi-desync-oob-pos",
+        "--dpi-desync-disoob-pos", "--dpi-desync-tlsrec-pos",
         "--dpi-desync-fake-tls-mod", "--dpi-desync-ttl", "--dpi-desync-autottl",
+        "--dpi-desync-any-protocol", "--dpi-desync-fooling", "--dpi-desync-fake-resend",
         "--hostlist", "--new", "--dpi-desync-repeats"
     ];
 
@@ -76,6 +79,21 @@ public static class BatGenomeParser
                 case "--dpi-desync-split-pos":
                     ApplySplitPos(g, val);
                     break;
+                case "--dpi-desync-disorder-pos":
+                    g.DisorderPos = val;
+                    break;
+                case "--dpi-desync-fake-pos":
+                    g.FakePos = val;
+                    break;
+                case "--dpi-desync-oob-pos":
+                    g.OobPos = val;
+                    break;
+                case "--dpi-desync-disoob-pos":
+                    g.DisoobPos = val;
+                    break;
+                case "--dpi-desync-tlsrec-pos":
+                    g.TlsrecPos = val;
+                    break;
                 case "--dpi-desync-fake-tls-mod":
                     g.FakeTlsMod = val;
                     break;
@@ -87,6 +105,15 @@ public static class BatGenomeParser
                     g.AutoTtl = string.IsNullOrEmpty(val) || val is "1" or "true" or "yes";
                     if (val is not null && int.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out var autottl))
                         g.AutoTtl = autottl != 0;
+                    break;
+                case "--dpi-desync-any-protocol":
+                    g.DesyncAnyProtocol = val;
+                    break;
+                case "--dpi-desync-fooling":
+                    g.DesyncFooling = val;
+                    break;
+                case "--dpi-desync-fake-resend":
+                    g.FakeResend = val;
                     break;
                 case "--hostlist":
                     g.Hostlist = val;
@@ -133,6 +160,9 @@ public static class BatGenomeParser
 
     private static bool FlagTakesValue(string flag) =>
         flag is "--filter-tcp" or "--filter-udp" or "--dpi-desync" or "--dpi-desync-split-pos"
+            or "--dpi-desync-disorder-pos" or "--dpi-desync-fake-pos" or "--dpi-desync-oob-pos"
+            or "--dpi-desync-disoob-pos" or "--dpi-desync-tlsrec-pos"
             or "--dpi-desync-fake-tls-mod" or "--dpi-desync-ttl" or "--dpi-desync-autottl"
+            or "--dpi-desync-any-protocol" or "--dpi-desync-fooling" or "--dpi-desync-fake-resend"
             or "--hostlist" or "--dpi-desync-repeats";
 }

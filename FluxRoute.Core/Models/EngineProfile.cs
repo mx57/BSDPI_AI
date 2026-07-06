@@ -20,6 +20,7 @@ public sealed class EngineProfile
     public string? TlsrecPos { get; set; }
 
     public int? FakeTtl { get; set; }
+    public bool AutoTtl { get; set; }
     public bool? Md5sig { get; set; }
     public string? FakeTlsMod { get; set; }
     public string? FakeSni { get; set; }
