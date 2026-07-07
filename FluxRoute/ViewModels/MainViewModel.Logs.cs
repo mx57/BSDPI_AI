@@ -82,7 +82,8 @@ public partial class MainViewModel
             new LogSource(RecentLogs, AppLogCategory.App),
             new LogSource(UpdateLogs, AppLogCategory.Updater),
             new LogSource(ServiceLogs, AppLogCategory.Service),
-            new LogSource(TgProxyLogs, AppLogCategory.TgProxy)
+            new LogSource(TgProxyLogs, AppLogCategory.TgProxy),
+            new LogSource(EngineLogs, AppLogCategory.DpiEngine)
         ])
         {
             SelectedLogCategory = SelectedLogCategory,

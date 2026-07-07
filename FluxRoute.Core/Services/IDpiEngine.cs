@@ -30,6 +30,7 @@ public interface IDpiEngine : IDisposable
     Task<EngineStatus> ProbeStatusAsync(CancellationToken ct = default);
 
     event EventHandler<EngineStatus>? StatusChanged;
+    event EventHandler<string>? MessageReceived;
 }
 
 public sealed class DpiEngineRunMode
