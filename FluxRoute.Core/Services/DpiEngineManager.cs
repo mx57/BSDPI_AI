@@ -28,6 +28,7 @@ public sealed class DpiEngineManager : IDisposable
     public string RunMode => _runMode;
 
     public event EventHandler<(DpiEngineType Engine, EngineStatus Status)>? AnyEngineStatusChanged;
+    public event EventHandler<(DpiEngineType Engine, string Message)>? AnyEngineMessageReceived;
 
     public DpiEngineManager(string engineDir)
     {
@@ -47,6 +48,8 @@ public sealed class DpiEngineManager : IDisposable
             };
             engine.StatusChanged += (_, status) =>
                 AnyEngineStatusChanged?.Invoke(this, (engine.EngineType, status));
+            engine.MessageReceived += (_, msg) =>
+                AnyEngineMessageReceived?.Invoke(this, (engine.EngineType, msg));
             return engine;
         });
     }

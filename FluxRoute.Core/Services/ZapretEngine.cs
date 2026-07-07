@@ -16,6 +16,7 @@ public sealed class ZapretEngine : IDpiEngine
     private bool _disposed;
 
     public event EventHandler<EngineStatus>? StatusChanged;
+    public event EventHandler<string>? MessageReceived;
 
     public ZapretEngine(string engineDir)
     {
@@ -73,6 +74,16 @@ public sealed class ZapretEngine : IDpiEngine
                     ProcessInfo = null;
                 }
                 NotifyStatus();
+            };
+            process.OutputDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    MessageReceived?.Invoke(this, e.Data);
+            };
+            process.ErrorDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    MessageReceived?.Invoke(this, e.Data);
             };
             process.EnableRaisingEvents = true;
 

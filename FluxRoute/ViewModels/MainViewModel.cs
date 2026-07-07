@@ -30,6 +30,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<string> RecentLogs { get; } = new();
     public ObservableCollection<string> UpdateLogs => Updates.UpdateLogs;
     public ObservableCollection<string> ServiceLogs => Service.ServiceLogs;
+    public ObservableCollection<string> EngineLogs { get; } = new();
 
     // Коллекции для менеджера доменов (UI)
 
@@ -618,6 +619,19 @@ public partial class MainViewModel : ObservableObject
         _aiOrchestrator.SyncRegistryFromEngine();
         RebuildAiStrategyRows();
         InitializeTgProxyOnStartup();
+
+        _engineManager.AnyEngineMessageReceived += (_, e) =>
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher is null || dispatcher.HasShutdownStarted) return;
+
+            dispatcher.BeginInvoke(() =>
+            {
+                EngineLogs.Add($"[{e.Engine}] {e.Message}");
+                while (EngineLogs.Count > 1000)
+                    EngineLogs.RemoveAt(0);
+            });
+        };
     }
 
     // ── Настройки ──

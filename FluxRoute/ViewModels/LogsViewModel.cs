@@ -61,6 +61,7 @@ public sealed partial class LogsViewModel : ObservableObject
         "TG WS Proxy",
         "Обновление engine",
         "Сервис",
+        "Движок DPI",
         "Ошибки"
     ];
 
@@ -261,6 +262,11 @@ public sealed partial class LogsViewModel : ObservableObject
             message.Contains("WinDivert", StringComparison.OrdinalIgnoreCase) ||
             message.Contains("Game Filter", StringComparison.OrdinalIgnoreCase))
             return AppLogCategory.Service;
+
+        if (message.Contains("winws", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("ciadpi", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("warp-plus", StringComparison.OrdinalIgnoreCase))
+            return AppLogCategory.DpiEngine;
 
         return fallback;
     }

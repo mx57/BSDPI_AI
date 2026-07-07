@@ -11,6 +11,7 @@ public enum AppLogCategory
     TgProxy,
     Updater,
     Service,
+    DpiEngine,
     Error
 }
 
@@ -39,6 +40,7 @@ public sealed class AppLogEntry
         AppLogCategory.TgProxy => "TG WS Proxy",
         AppLogCategory.Updater => "Обновление engine",
         AppLogCategory.Service => "Сервис",
+        AppLogCategory.DpiEngine => "Движок DPI",
         AppLogCategory.Error => "Ошибки",
         _ => Category.ToString()
     };

@@ -38,6 +38,7 @@ public sealed class AiStrategyRegistry
     private readonly Dictionary<(Guid GenomeId, string NetworkHash), BanditStateEntry> _banditLookup = [];
     private readonly Dictionary<Guid, List<BanditStateEntry>> _genomeLookup = [];
     private readonly Dictionary<string, List<BanditStateEntry>> _networkLookup = [];
+    private readonly Dictionary<Guid, StrategyGenome> _genomeIdLookup = [];
 
     public AiStrategyRegistry(string path)
     {
@@ -55,6 +56,12 @@ public sealed class AiStrategyRegistry
         _banditLookup.Clear();
         _genomeLookup.Clear();
         _networkLookup.Clear();
+        _genomeIdLookup.Clear();
+
+        foreach (var g in _model.Genomes)
+        {
+            _genomeIdLookup[g.Id] = g;
+        }
 
         foreach (var e in _model.Bandit)
         {
@@ -152,7 +159,10 @@ public sealed class AiStrategyRegistry
     public StrategyGenome? GetById(Guid id)
     {
         lock (_gate)
-            return _model.Genomes.FirstOrDefault(g => g.Id == id);
+        {
+            _genomeIdLookup.TryGetValue(id, out var g);
+            return g;
+        }
     }
 
     public void Upsert(StrategyGenome g)
@@ -164,6 +174,8 @@ public sealed class AiStrategyRegistry
                 _model.Genomes[idx] = g;
             else
                 _model.Genomes.Add(g);
+
+            _genomeIdLookup[g.Id] = g;
         }
     }
 
@@ -173,6 +185,7 @@ public sealed class AiStrategyRegistry
         {
             var n = _model.Genomes.RemoveAll(g => g.Id == id);
             var removedBandits = _model.Bandit.RemoveAll(b => b.GenomeId == id);
+            _genomeIdLookup.Remove(id);
 
             if (n > 0 || removedBandits > 0)
             {

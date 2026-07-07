@@ -16,6 +16,7 @@ public sealed class WarpEngine : IDpiEngine
     private bool _disposed;
 
     public event EventHandler<EngineStatus>? StatusChanged;
+    public event EventHandler<string>? MessageReceived;
 
     public WarpEngine(string engineDir)
     {
@@ -44,7 +45,15 @@ public sealed class WarpEngine : IDpiEngine
                 return false;
             }
 
-            var args = BuildWarpArgs(profile);
+            string? configPath = null;
+            if (!string.IsNullOrWhiteSpace(profile.WarpConfig))
+            {
+                var warpDir = Path.GetDirectoryName(executable) ?? _engineDir;
+                configPath = Path.Combine(warpDir, "warp.conf");
+                await File.WriteAllTextAsync(configPath, profile.WarpConfig, new System.Text.UTF8Encoding(false), ct).ConfigureAwait(false);
+            }
+
+            var args = BuildWarpArgs(profile, configPath);
 
             var psi = new ProcessStartInfo
             {
@@ -70,6 +79,16 @@ public sealed class WarpEngine : IDpiEngine
                     ProcessInfo = null;
                 }
                 NotifyStatus();
+            };
+            process.OutputDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    MessageReceived?.Invoke(this, e.Data);
+            };
+            process.ErrorDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    MessageReceived?.Invoke(this, e.Data);
             };
             process.EnableRaisingEvents = true;
 
@@ -147,7 +166,7 @@ public sealed class WarpEngine : IDpiEngine
         return candidates.FirstOrDefault(File.Exists);
     }
 
-    private static IReadOnlyList<string> BuildWarpArgs(EngineProfile p)
+    private static IReadOnlyList<string> BuildWarpArgs(EngineProfile p, string? configPath)
     {
         var list = new List<string>();
 
@@ -155,10 +174,10 @@ public sealed class WarpEngine : IDpiEngine
         list.Add("-b");
         list.Add($"127.0.0.1:{p.SocksPort}");
 
-        if (!string.IsNullOrWhiteSpace(p.WarpConfig))
+        if (configPath != null)
         {
             list.Add("--wgconf");
-            list.Add(p.WarpConfig);
+            list.Add(configPath);
         }
 
         if (p.MTU.HasValue)

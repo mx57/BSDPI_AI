@@ -17,6 +17,7 @@ public sealed class ByeDpiEngine : IDpiEngine
     private bool _disposed;
 
     public event EventHandler<EngineStatus>? StatusChanged;
+    public event EventHandler<string>? MessageReceived;
 
     public ByeDpiEngine(string engineDir)
     {
@@ -71,6 +72,16 @@ public sealed class ByeDpiEngine : IDpiEngine
                     ProcessInfo = null;
                 }
                 NotifyStatus();
+            };
+            process.OutputDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    MessageReceived?.Invoke(this, e.Data);
+            };
+            process.ErrorDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    MessageReceived?.Invoke(this, e.Data);
             };
             process.EnableRaisingEvents = true;
 
