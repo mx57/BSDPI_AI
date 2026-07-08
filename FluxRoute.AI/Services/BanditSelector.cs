@@ -105,7 +105,8 @@ public sealed class BanditSelector
             return pareto[_rng.Next(pareto.Count)].g;
         }
 
-        return scoredUsable.OrderByDescending(x => x.score).First().g;
+        // BOLT ⚡: Replacing O(N log N) OrderBy with O(N) MaxBy for better performance.
+        return scoredUsable.MaxBy(x => x.score).g;
     }
 
     public StrategyGenome? BestKnownForNetwork(IReadOnlyList<StrategyGenome> candidates, string networkHash)
