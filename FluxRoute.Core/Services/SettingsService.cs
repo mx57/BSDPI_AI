@@ -294,9 +294,9 @@ public sealed class SettingsService : ISettingsService
         settings.Ai ??= new AiSettings();
         settings.Ai.ByeDpiDefaults ??= new ByeDpiProfileSettings();
 
-        if (settings.Ai.UseHybridMode && settings.Ai.EngineMode == 0)
+        if (settings.Ai.UseHybridMode && settings.Ai.EngineMode == (int)DpiEngineMode.Zapret)
         {
-            settings.Ai.EngineMode = 2;
+            settings.Ai.EngineMode = (int)DpiEngineMode.Hybrid;
             settings.Ai.UseHybridMode = false;
         }
 

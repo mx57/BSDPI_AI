@@ -4,6 +4,7 @@ using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.AI.Models;
+using FluxRoute.Core.Extensions;
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 using Application = System.Windows.Application;
@@ -36,17 +37,7 @@ public partial class MainViewModel
     partial void OnEngineModeChanged(int value)
     {
         SaveSettings();
-        var runMode = value switch
-        {
-            (int)DpiEngineMode.Zapret => DpiRunMode.Standalone,
-            (int)DpiEngineMode.ByeDpi => DpiRunMode.Standalone,
-            (int)DpiEngineMode.Warp => DpiRunMode.Warp,
-            (int)DpiEngineMode.Hybrid => DpiRunMode.Hybrid,
-            (int)DpiEngineMode.WarpZapret => DpiRunMode.WarpZapret,
-            (int)DpiEngineMode.WarpByeDpi => DpiRunMode.WarpByeDpi,
-            _ => DpiRunMode.Standalone
-        };
-        _engineManager.SetRunMode(runMode);
+        _engineManager.SetRunMode(value.ToRunMode());
     }
 
     [ObservableProperty] private int byeDpiSocksPort = 1080;
@@ -116,7 +107,7 @@ public partial class MainViewModel
             ExplorationRatePermil = AiExplorationPermil,
             AutoDeleteBelowScore = AiAutoDeleteBelowScore,
             EngineMode = EngineMode,
-            UseHybridMode = EngineMode == 2,
+            UseHybridMode = EngineMode == (int)DpiEngineMode.Hybrid,
             ByeDpiSocksPort = ByeDpiSocksPort,
             ByeDpiDefaults = BuildByeDpiDefaultsSnapshot(),
         };
