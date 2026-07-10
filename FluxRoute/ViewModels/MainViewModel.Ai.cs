@@ -223,7 +223,8 @@ public partial class MainViewModel
     {
         try
         {
-            var csv = _aiHistoryStore.GetHistoryCsv(id => _aiRegistry.GetById(id)?.DisplayName ?? id.ToString());
+            var displayNameMap = _aiRegistry.GetGenomes().ToDictionary(g => g.Id, g => g.DisplayName);
+            var csv = _aiHistoryStore.GetHistoryCsv(id => _aiRegistry.GetById(id)?.DisplayName ?? id.ToString(), displayNameMap);
 
             var sfd = new Microsoft.Win32.SaveFileDialog
             {

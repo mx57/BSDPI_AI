@@ -33,6 +33,7 @@ public sealed class BanditSelector
             return null;
 
         var totalTOnNet = _registry.TotalPullsOnNetwork(networkHash);
+        var localBandits = _registry.GetBanditSnapshot(networkHash);
 
         // BOLT ⚡: Adaptive exploration. Reduce exploration as we gain more experience on this network.
         var adaptiveExploration = explorationPermil / (1.0 + Math.Sqrt(totalTOnNet / 50.0));
@@ -46,7 +47,8 @@ public sealed class BanditSelector
 
             foreach (var g in usable)
             {
-                var pulls = _registry.SumPullsForGenomeOnNetwork(g.Id, networkHash);
+                localBandits.TryGetValue(g.Id, out var entry);
+                var pulls = entry != null ? entry.Alpha + entry.Beta - 2 : 0;
                 if (pulls < minPulls)
                 {
                     minPulls = pulls;
@@ -57,12 +59,14 @@ public sealed class BanditSelector
         }
 
         var useUcb1 = _aiSettings().UseUcb1;
+        var aggregatedStats = _registry.GetAggregatedStatsSnapshot();
+
         var scoredUsable = usable.Select(g =>
         {
-            var entry = _registry.GetOrCreateBandit(g.Id, networkHash);
-            var pulls = entry.Alpha + entry.Beta - 2;
-            double alpha = entry.Alpha;
-            double beta = entry.Beta;
+            localBandits.TryGetValue(g.Id, out var entry);
+            var pulls = entry != null ? entry.Alpha + entry.Beta - 2 : 0;
+            double alpha = entry?.Alpha ?? 1;
+            double beta = entry?.Beta ?? 1;
             double score;
 
             if (useUcb1)
@@ -70,8 +74,9 @@ public sealed class BanditSelector
                 double mean;
                 if (pulls < 1)
                 {
-                    var agg = _registry.GetAggregatedBeta(g.Id);
-                    mean = agg.Alpha / (agg.Alpha + agg.Beta);
+                    aggregatedStats.TryGetValue(g.Id, out var agg);
+                    mean = agg.Alpha / (agg.Alpha + agg.Beta == 0 ? 1 : agg.Alpha + agg.Beta);
+                    if (agg.Alpha + agg.Beta == 0) mean = 0.5;
                 }
                 else
                 {
@@ -84,7 +89,7 @@ public sealed class BanditSelector
             {
                 if (pulls < 1)
                 {
-                    var agg = _registry.GetAggregatedBeta(g.Id);
+                    aggregatedStats.TryGetValue(g.Id, out var agg);
                     var apulls = agg.Alpha + agg.Beta - 2;
                     score = apulls < 0.5 ? 0.5 : SampleBeta(agg.Alpha, agg.Beta);
                 }
@@ -94,7 +99,7 @@ public sealed class BanditSelector
                 }
             }
 
-            return (g, score, latency: entry.AvgLatency);
+            return (g, score, latency: entry?.AvgLatency ?? 1000.0);
         }).ToList();
 
         if (_aiSettings().ParetoEnabled)
@@ -110,11 +115,14 @@ public sealed class BanditSelector
 
     public StrategyGenome? BestKnownForNetwork(IReadOnlyList<StrategyGenome> candidates, string networkHash)
     {
+        var localBandits = _registry.GetBanditSnapshot(networkHash);
         StrategyGenome? best = null;
         double bestMean = -1;
         foreach (var g in candidates)
         {
-            var entry = _registry.GetOrCreateBandit(g.Id, networkHash);
+            if (!localBandits.TryGetValue(g.Id, out var entry))
+                continue;
+
             var pulls = entry.Alpha + entry.Beta - 2;
             if (pulls < 1)
                 continue;
@@ -132,13 +140,15 @@ public sealed class BanditSelector
 
     public List<StrategyGenome> ParetoFront(IReadOnlyList<StrategyGenome> candidates, string networkHash)
     {
+        var localBandits = _registry.GetBanditSnapshot(networkHash);
+
         var scored = candidates
             .Select(g =>
             {
-                var entry = _registry.GetOrCreateBandit(g.Id, networkHash);
-                var pulls = entry.Alpha + entry.Beta - 2;
+                localBandits.TryGetValue(g.Id, out var entry);
+                var pulls = entry != null ? entry.Alpha + entry.Beta - 2 : 0;
                 if (pulls < 1) return (g, score: 0.5, latency: 1000.0);
-                var score = entry.Alpha / (entry.Alpha + entry.Beta);
+                var score = entry!.Alpha / (entry.Alpha + entry.Beta);
                 var latency = entry.AvgLatency;
                 return (g, score, latency);
             })
