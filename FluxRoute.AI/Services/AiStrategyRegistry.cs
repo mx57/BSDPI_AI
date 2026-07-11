@@ -319,4 +319,48 @@ public sealed class AiStrategyRegistry
 
         Save();
     }
+
+    /// <summary>
+    /// Retrieves a snapshot of all bandit states for a specific network under a single lock.
+    /// BOLT ⚡: Optimizes UI updates and selector loops from O(N) to O(1) locking.
+    /// </summary>
+    public Dictionary<Guid, BanditStateEntry> GetBanditSnapshot(string networkHash)
+    {
+        lock (_gate)
+        {
+            var result = new Dictionary<Guid, BanditStateEntry>();
+            if (_networkLookup.TryGetValue(networkHash, out var entries))
+            {
+                foreach (var e in entries)
+                {
+                    result[e.GenomeId] = e;
+                }
+            }
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Retrieves aggregated Alpha/Beta statistics for all genomes under a single lock.
+    /// BOLT ⚡: Optimizes global ranking calculations.
+    /// </summary>
+    public Dictionary<Guid, (double Alpha, double Beta)> GetAggregatedStatsSnapshot()
+    {
+        lock (_gate)
+        {
+            var result = new Dictionary<Guid, (double Alpha, double Beta)>();
+            foreach (var kv in _genomeLookup)
+            {
+                double succ = 0;
+                double fail = 0;
+                foreach (var x in kv.Value)
+                {
+                    succ += x.Alpha - 1;
+                    fail += x.Beta - 1;
+                }
+                result[kv.Key] = (succ + 1, fail + 1);
+            }
+            return result;
+        }
+    }
 }

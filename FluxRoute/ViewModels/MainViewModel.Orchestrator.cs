@@ -90,6 +90,24 @@ public sealed partial class AiStrategyRowVm : ObservableObject
             $"Результат последней проверки: {g.LastVerificationScore}% — итоговый счёт по выбранным сайтам и стабильности winws.\n" +
             $"Время: {t:HH:mm} — когда завершилась последняя проверка этой стратегии ({t:dd.MM.yyyy}).";
     }
+
+    /// <summary>
+    /// Updates the row in-place with new data.
+    /// BOLT ⚡: Prevents UI flickering and collection rebuilding overhead.
+    /// </summary>
+    public void Update(StrategyGenome g, int successes, int trials, double wilsonLower, bool isPareto, string lStats, string lLatency)
+    {
+        _suppress = true;
+        IsEnabled = g.OrchestratorEnabled;
+        _suppress = false;
+
+        IsPareto = isPareto;
+        LocalStats = lStats;
+        AvgLatencyText = lLatency;
+
+        ApplyWilson(successes, trials, wilsonLower);
+        ApplyVerification(g);
+    }
 }
 
 public partial class MainViewModel
@@ -252,63 +270,85 @@ public partial class MainViewModel
             ProfileScores.Add(s);
     }
 
+    /// <summary>
+    /// Rebuilds or updates the AI strategy list.
+    /// BOLT ⚡: Uses incremental updates to prevent UI flickering and reduce GC pressure.
+    /// </summary>
     public void RebuildAiStrategyRows()
     {
         try
         {
-            AiStrategyRows.Clear();
             var list = _aiRegistry.GetGenomes().ToList();
             var fp = _aiFingerprints.Capture();
 
-            var evolved = list.Where(x => x.Origin == StrategyOrigin.Evolved).OrderByDescending(x => x.Generation).ToList();
-            var builtin = list.Where(x => x.Origin != StrategyOrigin.Evolved)
-                .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
-
+            // Bulk data retrieval for better performance
+            var globalStats = _aiRegistry.GetAggregatedStatsSnapshot();
+            var networkStats = _aiRegistry.GetBanditSnapshot(fp.Hash);
             var paretoSet = new HashSet<Guid>(_aiBandit.ParetoFront(list, fp.Hash).Select(g => g.Id));
 
-            foreach (var g in evolved)
+            var sortedGenomes = list
+                .OrderByDescending(x => x.Origin == StrategyOrigin.Evolved)
+                .ThenByDescending(x => x.Generation)
+                .ThenBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var currentRows = AiStrategyRows.ToDictionary(r => r.Id);
+            var newRowsList = new List<AiStrategyRowVm>();
+
+            foreach (var g in sortedGenomes)
             {
-                AiStrategyRows.Add(CreateRow(g, fp.Hash, paretoSet.Contains(g.Id)));
+                globalStats.TryGetValue(g.Id, out var gs);
+                var (alpha, beta) = gs;
+                var succ = (int)alpha - 1;
+                var trials = (int)(alpha + beta) - 2;
+                var w = WilsonScore.LowerBound(succ, trials);
+
+                var isPareto = paretoSet.Contains(g.Id);
+
+                string lStats, lLatency;
+                if (networkStats.TryGetValue(g.Id, out var bandit) && (bandit.Alpha + bandit.Beta - 2) > 0)
+                {
+                    var lSucc = (int)bandit.Alpha - 1;
+                    var lTrials = (int)(bandit.Alpha + bandit.Beta) - 2;
+                    lStats = $"L: {(lSucc * 100.0 / lTrials):0}% ({lTrials})";
+                    lLatency = $"{bandit.AvgLatency:0} ms";
+                }
+                else
+                {
+                    lStats = "L: —";
+                    lLatency = "—";
+                }
+
+                if (currentRows.TryGetValue(g.Id, out var existing))
+                {
+                    existing.Update(g, succ, trials, w, isPareto, lStats, lLatency);
+                    newRowsList.Add(existing);
+                }
+                else
+                {
+                    var row = new AiStrategyRowVm(_aiRegistry, g, succ, trials, w)
+                    {
+                        IsPareto = isPareto,
+                        LocalStats = lStats,
+                        AvgLatencyText = lLatency
+                    };
+                    newRowsList.Add(row);
+                }
             }
 
-            foreach (var g in builtin)
+            // Sync collection
+            if (!AiStrategyRows.SequenceEqual(newRowsList))
             {
-                AiStrategyRows.Add(CreateRow(g, fp.Hash, paretoSet.Contains(g.Id)));
+                AiStrategyRows.Clear();
+                foreach (var r in newRowsList) AiStrategyRows.Add(r);
             }
 
             OnPropertyChanged(nameof(AiStrategyRowCount));
         }
-        catch
+        catch (Exception ex)
         {
+            Logs.Add($"[ИИ] Ошибка обновления списка: {ex.Message}");
         }
-    }
-
-    private AiStrategyRowVm CreateRow(StrategyGenome g, string networkHash, bool isPareto)
-    {
-        var (succ, trials, w) = _aiRegistry.GetAggregatedBeta(g.Id) switch
-        {
-            var (alpha, beta) => ((int)alpha - 1, (int)(alpha + beta) - 2, WilsonScore.LowerBound((int)alpha - 1, (int)(alpha + beta) - 2))
-        };
-
-        var row = new AiStrategyRowVm(_aiRegistry, g, succ, trials, w);
-        row.IsPareto = isPareto;
-
-        var bandit = _aiRegistry.GetOrCreateBandit(g.Id, networkHash);
-        var lSucc = (int)bandit.Alpha - 1;
-        var lTrials = (int)(bandit.Alpha + bandit.Beta) - 2;
-
-        if (lTrials > 0)
-        {
-            row.LocalStats = $"L: {(lSucc * 100.0 / lTrials):0}% ({lTrials})";
-            row.AvgLatencyText = $"{bandit.AvgLatency:0} ms";
-        }
-        else
-        {
-            row.LocalStats = "L: —";
-            row.AvgLatencyText = "—";
-        }
-
-        return row;
     }
 
     private Task EnsureProtectionRunningAsync()
