@@ -309,6 +309,54 @@ public sealed class AiStrategyRegistry
         }
     }
 
+    /// <summary>
+    /// BOLT ⚡: Optimized bulk retrieval of all bandit states for a network under a single lock.
+    /// </summary>
+    public Dictionary<Guid, BanditStateEntry> GetBanditSnapshot(string networkHash)
+    {
+        lock (_gate)
+        {
+            if (!_networkLookup.TryGetValue(networkHash, out var entries))
+                return [];
+
+            return entries.ToDictionary(e => e.GenomeId);
+        }
+    }
+
+    /// <summary>
+    /// BOLT ⚡: Optimized bulk retrieval of aggregated Alpha/Beta stats for all genomes under a single lock.
+    /// </summary>
+    public Dictionary<Guid, (double Alpha, double Beta)> GetAggregatedStatsSnapshot()
+    {
+        lock (_gate)
+        {
+            var result = new Dictionary<Guid, (double Alpha, double Beta)>();
+            foreach (var kv in _genomeLookup)
+            {
+                double succ = 0;
+                double fail = 0;
+                foreach (var x in kv.Value)
+                {
+                    succ += x.Alpha - 1;
+                    fail += x.Beta - 1;
+                }
+                result[kv.Key] = (succ + 1, fail + 1);
+            }
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// BOLT ⚡: Optimized bulk retrieval of all genomes under a single lock.
+    /// </summary>
+    public Dictionary<Guid, StrategyGenome> GetGenomeSnapshot()
+    {
+        lock (_gate)
+        {
+            return _model.Genomes.ToDictionary(g => g.Id);
+        }
+    }
+
     public void ResetAll()
     {
         lock (_gate)

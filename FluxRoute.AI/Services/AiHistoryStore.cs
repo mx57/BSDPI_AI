@@ -112,8 +112,9 @@ public sealed class AiHistoryStore
     /// <summary>
     /// Generates a CSV string from the AI history.
     /// BOLT ⚡: Uses InvariantCulture for numbers to prevent CSV corruption in locales where comma is a decimal separator.
+    /// BOLT ⚡: Supports optional pre-calculated displayNameMap to avoid O(N) locking overhead.
     /// </summary>
-    public string GetHistoryCsv(Func<Guid, string> getDisplayName)
+    public string GetHistoryCsv(Func<Guid, string> getDisplayName, Dictionary<Guid, string>? displayNameMap = null)
     {
         var all = LoadAll().OrderByDescending(x => x.Timestamp).ToList();
         var sb = new StringBuilder();
@@ -121,7 +122,12 @@ public sealed class AiHistoryStore
 
         foreach (var o in all)
         {
-            var strategy = getDisplayName(o.GenomeId);
+            string strategy;
+            if (displayNameMap != null && displayNameMap.TryGetValue(o.GenomeId, out var mappedName))
+                strategy = mappedName;
+            else
+                strategy = getDisplayName(o.GenomeId);
+
             var failedTargets = string.Join("|", o.FailedTargetKeys);
 
             sb.Append(o.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")).Append(',');

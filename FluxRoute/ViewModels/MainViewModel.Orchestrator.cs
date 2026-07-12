@@ -44,8 +44,40 @@ public sealed partial class AiStrategyRowVm : ObservableObject
         EngineType = g.EngineType.ToString();
         OriginTag = g.Origin == StrategyOrigin.Evolved ? "эволюция" : "встроенная";
         CanDelete = g.Origin == StrategyOrigin.Evolved;
+        Update(g, successes, trials, wilsonLower, false, null);
+    }
+
+    /// <summary>
+    /// BOLT ⚡: In-place update of the UI state to avoid recreating the entire row object.
+    /// </summary>
+    public void Update(StrategyGenome g, int successes, int trials, double wilsonLower, bool isPareto, BanditStateEntry? localBandit)
+    {
         ApplyWilson(successes, trials, wilsonLower);
         ApplyVerification(g);
+        IsPareto = isPareto;
+
+        if (localBandit != null)
+        {
+            var lSucc = (int)localBandit.Alpha - 1;
+            var lTrials = (int)(localBandit.Alpha + localBandit.Beta) - 2;
+
+            if (lTrials > 0)
+            {
+                LocalStats = $"L: {(lSucc * 100.0 / lTrials):0}% ({lTrials})";
+                AvgLatencyText = $"{localBandit.AvgLatency:0} ms";
+            }
+            else
+            {
+                LocalStats = "L: —";
+                AvgLatencyText = "—";
+            }
+        }
+        else
+        {
+            LocalStats = "L: —";
+            AvgLatencyText = "—";
+        }
+
         _suppress = true;
         IsEnabled = g.OrchestratorEnabled;
         _suppress = false;
@@ -252,28 +284,64 @@ public partial class MainViewModel
             ProfileScores.Add(s);
     }
 
+    /// <summary>
+    /// BOLT ⚡: Optimized diff-based dashboard update. Reduces UI flickering and O(N) locking.
+    /// Uses pre-aggregated snapshots for O(1) row processing.
+    /// </summary>
     public void RebuildAiStrategyRows()
     {
         try
         {
-            AiStrategyRows.Clear();
-            var list = _aiRegistry.GetGenomes().ToList();
             var fp = _aiFingerprints.Capture();
+            var genomes = _aiRegistry.GetGenomeSnapshot();
+            var banditSnapshot = _aiRegistry.GetBanditSnapshot(fp.Hash);
+            var aggStats = _aiRegistry.GetAggregatedStatsSnapshot();
+            var paretoSet = new HashSet<Guid>(_aiBandit.ParetoFront(genomes.Values.ToList(), fp.Hash).Select(g => g.Id));
 
-            var evolved = list.Where(x => x.Origin == StrategyOrigin.Evolved).OrderByDescending(x => x.Generation).ToList();
-            var builtin = list.Where(x => x.Origin != StrategyOrigin.Evolved)
-                .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+            var orderedList = genomes.Values
+                .OrderByDescending(g => g.Origin == StrategyOrigin.Evolved)
+                .ThenByDescending(g => g.Generation)
+                .ThenBy(g => g.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-            var paretoSet = new HashSet<Guid>(_aiBandit.ParetoFront(list, fp.Hash).Select(g => g.Id));
+            var currentRows = AiStrategyRows.ToDictionary(r => r.Id);
+            var toRemove = currentRows.Keys.ToHashSet();
 
-            foreach (var g in evolved)
+            for (int i = 0; i < orderedList.Count; i++)
             {
-                AiStrategyRows.Add(CreateRow(g, fp.Hash, paretoSet.Contains(g.Id)));
+                var g = orderedList[i];
+                toRemove.Remove(g.Id);
+
+                if (!aggStats.TryGetValue(g.Id, out var stats))
+                    stats = (1, 1);
+
+                var succ = (int)stats.Alpha - 1;
+                var trials = (int)(stats.Alpha + stats.Beta) - 2;
+                var w = WilsonScore.LowerBound(succ, trials);
+
+                banditSnapshot.TryGetValue(g.Id, out var localBandit);
+
+                if (currentRows.TryGetValue(g.Id, out var existing))
+                {
+                    existing.Update(g, succ, trials, w, paretoSet.Contains(g.Id), localBandit);
+
+                    // Перемещаем строку на правильную позицию, если она изменилась
+                    var oldIdx = AiStrategyRows.IndexOf(existing);
+                    if (oldIdx != i)
+                        AiStrategyRows.Move(oldIdx, i);
+                }
+                else
+                {
+                    var newRow = new AiStrategyRowVm(_aiRegistry, g, succ, trials, w);
+                    newRow.Update(g, succ, trials, w, paretoSet.Contains(g.Id), localBandit);
+                    AiStrategyRows.Insert(i, newRow);
+                }
             }
 
-            foreach (var g in builtin)
+            foreach (var id in toRemove)
             {
-                AiStrategyRows.Add(CreateRow(g, fp.Hash, paretoSet.Contains(g.Id)));
+                if (currentRows.TryGetValue(id, out var row))
+                    AiStrategyRows.Remove(row);
             }
 
             OnPropertyChanged(nameof(AiStrategyRowCount));
@@ -281,34 +349,6 @@ public partial class MainViewModel
         catch
         {
         }
-    }
-
-    private AiStrategyRowVm CreateRow(StrategyGenome g, string networkHash, bool isPareto)
-    {
-        var (succ, trials, w) = _aiRegistry.GetAggregatedBeta(g.Id) switch
-        {
-            var (alpha, beta) => ((int)alpha - 1, (int)(alpha + beta) - 2, WilsonScore.LowerBound((int)alpha - 1, (int)(alpha + beta) - 2))
-        };
-
-        var row = new AiStrategyRowVm(_aiRegistry, g, succ, trials, w);
-        row.IsPareto = isPareto;
-
-        var bandit = _aiRegistry.GetOrCreateBandit(g.Id, networkHash);
-        var lSucc = (int)bandit.Alpha - 1;
-        var lTrials = (int)(bandit.Alpha + bandit.Beta) - 2;
-
-        if (lTrials > 0)
-        {
-            row.LocalStats = $"L: {(lSucc * 100.0 / lTrials):0}% ({lTrials})";
-            row.AvgLatencyText = $"{bandit.AvgLatency:0} ms";
-        }
-        else
-        {
-            row.LocalStats = "L: —";
-            row.AvgLatencyText = "—";
-        }
-
-        return row;
     }
 
     private Task EnsureProtectionRunningAsync()

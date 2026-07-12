@@ -216,14 +216,15 @@ public partial class MainViewModel
 
     /// <summary>
     /// Exports the AI history to a CSV file.
-    /// BOLT ⚡: Uses UTF-8 with BOM for Excel compatibility.
+    /// BOLT ⚡: Uses UTF-8 with BOM for Excel compatibility and pre-calculated display names for O(1) performance.
     /// </summary>
     [RelayCommand]
     private void ExportHistory()
     {
         try
         {
-            var csv = _aiHistoryStore.GetHistoryCsv(id => _aiRegistry.GetById(id)?.DisplayName ?? id.ToString());
+            var displayNameMap = _aiRegistry.GetGenomeSnapshot().ToDictionary(kv => kv.Key, kv => kv.Value.DisplayName);
+            var csv = _aiHistoryStore.GetHistoryCsv(id => id.ToString(), displayNameMap);
 
             var sfd = new Microsoft.Win32.SaveFileDialog
             {
