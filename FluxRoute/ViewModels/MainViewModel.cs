@@ -356,21 +356,21 @@ public partial class MainViewModel : ObservableObject
 
     // ── Настройки сайтов ──
     [ObservableProperty] private bool siteYouTube = true;
-    partial void OnSiteYouTubeChanged(bool value) => SaveSettings();
+    partial void OnSiteYouTubeChanged(bool value) { SaveSettings(); UpdateOrchestratorEnabledSites(); }
     [ObservableProperty] private bool siteDiscord = true;
-    partial void OnSiteDiscordChanged(bool value) => SaveSettings();
+    partial void OnSiteDiscordChanged(bool value) { SaveSettings(); UpdateOrchestratorEnabledSites(); }
     [ObservableProperty] private bool siteGoogle = true;
-    partial void OnSiteGoogleChanged(bool value) => SaveSettings();
+    partial void OnSiteGoogleChanged(bool value) { SaveSettings(); UpdateOrchestratorEnabledSites(); }
     [ObservableProperty] private bool siteTwitch = true;
-    partial void OnSiteTwitchChanged(bool value) => SaveSettings();
+    partial void OnSiteTwitchChanged(bool value) { SaveSettings(); UpdateOrchestratorEnabledSites(); }
     [ObservableProperty] private bool siteInstagram = true;
-    partial void OnSiteInstagramChanged(bool value) => SaveSettings();
+    partial void OnSiteInstagramChanged(bool value) { SaveSettings(); UpdateOrchestratorEnabledSites(); }
     [ObservableProperty] private bool siteTelegram = true;
-    partial void OnSiteTelegramChanged(bool value) => SaveSettings();
+    partial void OnSiteTelegramChanged(bool value) { SaveSettings(); UpdateOrchestratorEnabledSites(); }
 
     // ── Свои сайты ──
     [ObservableProperty] private string userCustomSitesText = "";
-    partial void OnUserCustomSitesTextChanged(string value) => SaveSettings();
+    partial void OnUserCustomSitesTextChanged(string value) { SaveSettings(); SyncCustomHostlist(); }
 
     private readonly OrchestratorService _orchestrator;
     private readonly AiOrchestratorService _aiOrchestrator;
@@ -836,52 +836,62 @@ public partial class MainViewModel : ObservableObject
         {
             var listsDir = Path.Combine(EngineDir, "lists");
             Directory.CreateDirectory(listsDir);
-            var userHostlistPath = Path.Combine(listsDir, "list-general-user.txt");
 
+            SyncFile("list-general-user.txt", CustomTargetDomains, false);
+            SyncFile("list-exclude-user.txt", CustomExcludeDomains, true);
+
+            UpdateOrchestratorEnabledSites();
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"❌ Ошибка синхронизации списков доменов: {ex.Message}");
+            Logs.Add($"   Stack: {ex.StackTrace?.Split('\n')[0]}");
+        }
+
+        void SyncFile(string fileName, System.Collections.ObjectModel.ObservableCollection<string> modernList, bool isExclude)
+        {
+            var path = Path.Combine(EngineDir, "lists", fileName);
             var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // 1. Берем домены из нового Менеджера доменов (вкладка "Домены")
-            foreach (var d in CustomTargetDomains)
+            // 1. Modern list from Domain Manager
+            foreach (var d in modernList)
             {
                 if (!string.IsNullOrWhiteSpace(d))
                     domains.Add(d.Trim());
             }
 
-            // 2. Подхватываем из старого TextBox (для обратной совместимости)
+            // 2. Legacy list from TextBox
             if (!string.IsNullOrWhiteSpace(UserCustomSitesText))
             {
                 var legacy = UserCustomSitesText
                     .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Where(s => !s.StartsWith("!"));
+                    .Where(s => isExclude ? s.StartsWith("!") : !s.StartsWith("!"));
+
                 foreach (var d in legacy)
-                    domains.Add(d.Trim());
+                {
+                    var clean = isExclude ? d.TrimStart('!').Trim() : d.Trim();
+                    if (!string.IsNullOrWhiteSpace(clean))
+                        domains.Add(clean);
+                }
             }
 
-            // Записываем в файл
             if (domains.Count > 0)
             {
-                // Используем явное удаление + запись, чтобы избежать кэширования
-                if (File.Exists(userHostlistPath))
+                if (File.Exists(path))
                 {
-                    try { File.SetAttributes(userHostlistPath, FileAttributes.Normal); } catch { }
+                    try { File.SetAttributes(path, FileAttributes.Normal); } catch { }
                 }
-                File.WriteAllLines(userHostlistPath, domains.OrderBy(x => x), new UTF8Encoding(false));
-                Logs.Add($"[Sync] Записано {domains.Count} доменов в list-general-user.txt");
+                File.WriteAllLines(path, domains.OrderBy(x => x), new UTF8Encoding(false));
+                Logs.Add($"[Sync] Записано {domains.Count} доменов в {fileName}");
             }
             else
             {
-                // Пустой список — удаляем файл или пишем комментарий
-                if (File.Exists(userHostlistPath))
-                    File.Delete(userHostlistPath);
+                if (File.Exists(path))
+                    File.Delete(path);
                 else
-                    File.WriteAllText(userHostlistPath, "# custom domains empty\n", new UTF8Encoding(false));
-                Logs.Add("[Sync] list-general-user.txt очищен");
+                    File.WriteAllText(path, $"# custom {fileName} empty\n", new UTF8Encoding(false));
+                Logs.Add($"[Sync] {fileName} очищен");
             }
-        }
-        catch (Exception ex)
-        {
-            Logs.Add($"❌ Ошибка записи list-general-user.txt: {ex.Message}");
-            Logs.Add($"   Stack: {ex.StackTrace?.Split('\n')[0]}");
         }
     }
 
