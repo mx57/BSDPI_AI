@@ -30,6 +30,7 @@ public sealed class AiOrchestratorService : IDisposable
     public bool IsRunning => _cts is not null;
     public DateTimeOffset? NextCheckAt { get; private set; }
 
+    private readonly SemaphoreSlim _cycleLock = new(1, 1);
     private readonly Func<IEnumerable<ProfileItem>> _getProfiles;
     private readonly Func<ProfileItem?> _getActiveProfile;
     private readonly Func<ProfileItem?, Task> _switchProfile;
@@ -108,7 +109,18 @@ public sealed class AiOrchestratorService : IDisposable
         _probeService = new ProfileProbeService(_connectivity, _switchProfile);
     }
 
-    public void SyncRegistryFromEngine() => SyncBuiltins();
+    public async Task SyncRegistryFromEngineAsync()
+    {
+        await _cycleLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            SyncBuiltins();
+        }
+        finally
+        {
+            _cycleLock.Release();
+        }
+    }
 
     public void Start()
     {
@@ -137,40 +149,59 @@ public sealed class AiOrchestratorService : IDisposable
         Notify("ИИ-оркестратор остановлен.");
     }
 
-    public Task CheckNowAsync() => RunCycleAsync(CancellationToken.None);
+    public async Task CheckNowAsync()
+    {
+        await _cycleLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await RunCycleAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        finally
+        {
+            _cycleLock.Release();
+        }
+    }
 
     public async Task ProbeAllEnabledStrategiesAsync(CancellationToken ct = default)
     {
-        var previousGenome = _currentGenome;
-        var previousProfile = _getActiveProfile();
-        var wasRunning = _isAnyEngineRunning();
+        await _cycleLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            await _refreshProfiles().ConfigureAwait(false);
-            var fp = _fingerprints.Capture();
-            _registry.MarkNetworkSeen(fp.Hash);
-            _registry.Save();
-            var list = _registry.GetActiveGenomes().ToList();
-            if (list.Count == 0)
+            var previousGenome = _currentGenome;
+            var previousProfile = _getActiveProfile();
+            var wasRunning = _isAnyEngineRunning();
+            try
             {
-                Notify("ИИ: нет отмеченных стратегий для проверки.");
-                return;
+                await _refreshProfiles().ConfigureAwait(false);
+                var fp = _fingerprints.Capture();
+                _registry.MarkNetworkSeen(fp.Hash);
+                _registry.Save();
+                var list = _registry.GetActiveGenomes().ToList();
+                if (list.Count == 0)
+                {
+                    Notify("ИИ: нет отмеченных стратегий для проверки.");
+                    return;
+                }
+                Notify($"ИИ: ручная проверка {list.Count} стратегий...");
+                foreach (var g in list)
+                {
+                    var deleted = await TryProbeAndPersistGenomeAsync(g, fp, ct, isFreshlyEvolved: false).ConfigureAwait(false);
+                    if (deleted && _currentGenome?.Id == g.Id)
+                        _currentGenome = null;
+                }
             }
-            Notify($"ИИ: ручная проверка {list.Count} стратегий...");
-            foreach (var g in list)
+            finally
             {
-                var deleted = await TryProbeAndPersistGenomeAsync(g, fp, ct, isFreshlyEvolved: false).ConfigureAwait(false);
-                if (deleted && _currentGenome?.Id == g.Id)
-                    _currentGenome = null;
+                if (previousProfile is not null)
+                    await _switchProfile(previousProfile).ConfigureAwait(false);
+                else if (wasRunning)
+                    await _ensureProtectionRunning().ConfigureAwait(false);
+                _currentGenome = previousGenome;
             }
         }
         finally
         {
-            if (previousProfile is not null)
-                await _switchProfile(previousProfile).ConfigureAwait(false);
-            else if (wasRunning)
-                await _ensureProtectionRunning().ConfigureAwait(false);
-            _currentGenome = previousGenome;
+            _cycleLock.Release();
         }
     }
 
@@ -187,17 +218,34 @@ public sealed class AiOrchestratorService : IDisposable
     {
         try
         {
-            SyncBuiltins();
-            await _refreshProfiles().ConfigureAwait(false);
+            await _cycleLock.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                SyncBuiltins();
+                await _refreshProfiles().ConfigureAwait(false);
 
-            await PickAndApplyInitialAsync(ct).ConfigureAwait(false);
+                await PickAndApplyInitialAsync(ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                _cycleLock.Release();
+            }
+
             if (ct.IsCancellationRequested)
                 return;
 
-            if (!_fastStartDone && _aiSettings().FastStartEnabled)
+            await _cycleLock.WaitAsync(ct).ConfigureAwait(false);
+            try
             {
-                _fastStartDone = true;
-                await FastStartProbeAsync(ct).ConfigureAwait(false);
+                if (!_fastStartDone && _aiSettings().FastStartEnabled)
+                {
+                    _fastStartDone = true;
+                    await FastStartProbeAsync(ct).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                _cycleLock.Release();
             }
 
             while (!ct.IsCancellationRequested)
@@ -220,7 +268,15 @@ public sealed class AiOrchestratorService : IDisposable
                     break;
                 }
 
-                await RunCycleAsync(ct).ConfigureAwait(false);
+                await _cycleLock.WaitAsync(ct).ConfigureAwait(false);
+                try
+                {
+                    await RunCycleAsync(ct).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _cycleLock.Release();
+                }
             }
 
             NextCheckAt = null;
@@ -603,14 +659,22 @@ public sealed class AiOrchestratorService : IDisposable
 
     public async Task EvolveNowAsync(CancellationToken ct = default)
     {
-        SyncBuiltins();
-        var fp = _fingerprints.Capture();
-        var child = await Task.Run(() => _evolver.Evolve(fp), ct).ConfigureAwait(false);
-        await _refreshProfiles().ConfigureAwait(false);
-        if (child is not null)
-            await VerifyEvolvedGenomeAsync(child, fp, ct).ConfigureAwait(false);
-        else
-            Notify("ИИ: эволюция не создала новую стратегию (мало активных родителей или дубликат).");
+        await _cycleLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            SyncBuiltins();
+            var fp = _fingerprints.Capture();
+            var child = await Task.Run(() => _evolver.Evolve(fp), ct).ConfigureAwait(false);
+            await _refreshProfiles().ConfigureAwait(false);
+            if (child is not null)
+                await VerifyEvolvedGenomeAsync(child, fp, ct).ConfigureAwait(false);
+            else
+                Notify("ИИ: эволюция не создала новую стратегию (мало активных родителей или дубликат).");
+        }
+        finally
+        {
+            _cycleLock.Release();
+        }
     }
 
     private List<StrategyGenome> GenePool()

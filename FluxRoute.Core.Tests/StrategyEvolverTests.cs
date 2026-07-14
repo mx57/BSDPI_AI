@@ -61,4 +61,34 @@ public sealed class StrategyEvolverTests
         Assert.Null(child.BatFileName);
         Assert.Contains(reg.GetGenomes(), x => x.Id == child.Id);
     }
+
+    [Fact]
+    public void MutateZapret_HandlesNewPositions()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "fr-ai-ev-" + Guid.NewGuid().ToString("N"));
+        var reg = new AiStrategyRegistry(Path.Combine(root, "reg.json"));
+        var hist = new AiHistoryStore(Path.Combine(root, "hist.jsonl"));
+        var evolver = new StrategyEvolver(reg, hist, () => root, () => new AiSettings(), new Random(42));
+
+        var g = new StrategyGenome { EngineType = DpiEngineType.Zapret, DesyncMode = "split" };
+
+        // Test OobPos mutation (case 12)
+        var method = typeof(StrategyEvolver).GetMethod("MutateZapret", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        // Case 12: OobPos
+        method!.Invoke(evolver, [g, 12]);
+        Assert.NotNull(g.OobPos);
+
+        // Case 13: DisoobPos
+        method!.Invoke(evolver, [g, 13]);
+        Assert.NotNull(g.DisoobPos);
+
+        // Case 14: TlsrecPos
+        method!.Invoke(evolver, [g, 14]);
+        Assert.NotNull(g.TlsrecPos);
+
+        // Verify IsValid accepts these
+        Assert.True(StrategyGenomeValidator.IsValid(g));
+    }
 }
