@@ -43,4 +43,38 @@ public sealed class AiStrategyRegistryTests
         reg2.Load();
         Assert.False(reg2.GetById(a.Id)!.OrchestratorEnabled);
     }
+
+    [Fact]
+    public void GetBanditSnapshot_ReturnsCorrectEntries()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "fr-reg-" + Guid.NewGuid().ToString("N") + ".json");
+        var reg = new AiStrategyRegistry(path);
+        var gid = Guid.NewGuid();
+        var net = "net1";
+
+        reg.RecordBanditSuccess(gid, net, 100);
+        reg.RecordBanditFailure(gid, net, 200);
+
+        var snapshot = reg.GetBanditSnapshot(net);
+        Assert.True(snapshot.ContainsKey(gid));
+        Assert.Equal(2, snapshot[gid].Alpha); // 1 (initial) + 1 (success)
+        Assert.Equal(2, snapshot[gid].Beta);  // 1 (initial) + 1 (failure)
+    }
+
+    [Fact]
+    public void GetAggregatedStatsSnapshot_CalculatesCorrectly()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "fr-reg-" + Guid.NewGuid().ToString("N") + ".json");
+        var reg = new AiStrategyRegistry(path);
+        var gid = Guid.NewGuid();
+
+        reg.RecordBanditSuccess(gid, "net1", 100);
+        reg.RecordBanditSuccess(gid, "net2", 150);
+        reg.RecordBanditFailure(gid, "net1", 200);
+
+        var snapshot = reg.GetAggregatedStatsSnapshot();
+        Assert.True(snapshot.ContainsKey(gid));
+        Assert.Equal(3, snapshot[gid].Alpha); // 1 (initial) + 1 + 1 (successes)
+        Assert.Equal(2, snapshot[gid].Beta);  // 1 (initial) + 1 (failure)
+    }
 }

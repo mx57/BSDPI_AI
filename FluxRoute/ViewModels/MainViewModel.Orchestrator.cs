@@ -153,7 +153,7 @@ public partial class MainViewModel
                 if (e.Message.Contains("Сканирование завершено", StringComparison.OrdinalIgnoreCase))
                 {
                     SortProfileScores();
-                    SaveSettings();
+                    SaveSettingsDebounced();
                 }
 
                 if (e.IsSwitched && e.NewProfile is not null)
@@ -208,10 +208,10 @@ public partial class MainViewModel
         if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
             return;
 
-        void SwitchOnUi()
+        async Task SwitchOnUi()
         {
             _suppressOrchestratorStop = true;
-            Stop();
+            await Stop();
             _suppressOrchestratorStop = false;
 
             if (profile is not null)
@@ -223,23 +223,23 @@ public partial class MainViewModel
         }
 
         if (dispatcher.CheckAccess())
-            SwitchOnUi();
+            await SwitchOnUi();
         else
-            await dispatcher.InvokeAsync(SwitchOnUi).Task.ConfigureAwait(false);
+            await dispatcher.InvokeAsync(SwitchOnUi).Task.Unwrap().ConfigureAwait(false);
 
         // Даём время на завершение WinDivert и winws.exe
         await Task.Delay(1500).ConfigureAwait(false);
 
-        void StartOnUi()
+        async Task StartOnUi()
         {
             if (profile is not null)
-                Start();
+                await Start();
         }
 
         if (dispatcher.CheckAccess())
-            StartOnUi();
+            await StartOnUi();
         else
-            await dispatcher.InvokeAsync(StartOnUi).Task.ConfigureAwait(false);
+            await dispatcher.InvokeAsync(StartOnUi).Task.Unwrap().ConfigureAwait(false);
     }
 
     private Task UpdateProfileScoreAsync(string fileName, int score)
@@ -357,19 +357,18 @@ public partial class MainViewModel
         if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
             return Task.CompletedTask;
 
-        void EnsureOnUi()
+        async Task EnsureOnUi()
         {
             if (SelectedProfile is not null && !IsTrackedProcessRunning())
-                Start();
+                await Start();
         }
 
         if (dispatcher.CheckAccess())
         {
-            EnsureOnUi();
-            return Task.CompletedTask;
+            return EnsureOnUi();
         }
 
-        return dispatcher.InvokeAsync(EnsureOnUi).Task;
+        return dispatcher.InvokeAsync(EnsureOnUi).Task.Unwrap();
     }
 
 
@@ -415,7 +414,7 @@ public partial class MainViewModel
         if (wasActive)
         {
             if (IsRunning)
-                Stop();
+                _ = Stop();
             SelectedProfile = Profiles.FirstOrDefault();
         }
 
@@ -505,7 +504,7 @@ public partial class MainViewModel
             await _orchestrator.ScanAllProfilesAsync();
             SortProfileScores();
             ScanProgressText = "Сканирование завершено";
-            SaveSettings();
+            SaveSettingsDebounced();
 
             var top = ProfileScores.FirstOrDefault(s => s.Score > 0);
             if (top is not null)
@@ -601,9 +600,11 @@ public partial class MainViewModel
             {
                 Logs.Add("[Оркестратор] Переход в ручной режим — перезапуск Zapret...");
                 _suppressOrchestratorStop = true;
-                Stop();
-                _suppressOrchestratorStop = false;
-                Start();
+                _ = Stop().ContinueWith(_ =>
+                {
+                    _suppressOrchestratorStop = false;
+                    return Start();
+                }, TaskScheduler.FromCurrentSynchronizationContext());
             }
         }
     }

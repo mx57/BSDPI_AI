@@ -324,7 +324,8 @@ public sealed class AiStrategyRegistry
     }
 
     /// <summary>
-    /// BOLT ⚡: Optimized bulk retrieval of aggregated Alpha/Beta stats for all genomes under a single lock.
+    /// BOLT ⚡: Returns a snapshot of aggregated Alpha/Beta stats for all strategies.
+    /// Calculated in a single O(N) pass over all records, replacing N lock acquisitions.
     /// </summary>
     public Dictionary<Guid, (double Alpha, double Beta)> GetAggregatedStatsSnapshot()
     {
