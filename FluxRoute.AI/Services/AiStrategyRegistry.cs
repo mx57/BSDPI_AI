@@ -309,6 +309,45 @@ public sealed class AiStrategyRegistry
         }
     }
 
+    /// <summary>
+    /// BOLT ⚡: Returns a snapshot of all bandit entries for a specific network.
+    /// Reduces lock contention by avoiding O(N) calls to GetOrCreateBandit/GetAggregatedBeta.
+    /// </summary>
+    public Dictionary<Guid, BanditStateEntry> GetBanditSnapshot(string networkHash)
+    {
+        lock (_gate)
+        {
+            if (!_networkLookup.TryGetValue(networkHash, out var entries))
+                return [];
+
+            return entries.ToDictionary(e => e.GenomeId);
+        }
+    }
+
+    /// <summary>
+    /// BOLT ⚡: Returns a snapshot of aggregated Alpha/Beta stats for all strategies.
+    /// Calculated in a single O(N) pass over all records, replacing N lock acquisitions.
+    /// </summary>
+    public Dictionary<Guid, (double Alpha, double Beta)> GetAggregatedStatsSnapshot()
+    {
+        lock (_gate)
+        {
+            var result = new Dictionary<Guid, (double Alpha, double Beta)>();
+            foreach (var kv in _genomeLookup)
+            {
+                double succ = 0;
+                double fail = 0;
+                foreach (var x in kv.Value)
+                {
+                    succ += x.Alpha - 1;
+                    fail += x.Beta - 1;
+                }
+                result[kv.Key] = (succ + 1, fail + 1);
+            }
+            return result;
+        }
+    }
+
     public void ResetAll()
     {
         lock (_gate)

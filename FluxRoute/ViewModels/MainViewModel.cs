@@ -133,9 +133,9 @@ public partial class MainViewModel : ObservableObject
         // 3. Перезапустить защиту
         if (IsRunning)
         {
-            Stop();
+            await Stop();
             await Task.Delay(1200).ConfigureAwait(false);
-            Application.Current.Dispatcher.BeginInvoke(() => Start());
+            await Start();
         }
 
         AddToRecentLogs($"✅ Пресет «{preset.Name}» применён");
@@ -255,8 +255,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!_suppressProfileWarning && _settingsLoaded && IsRunning && newValue is not null)
         {
-            Stop();
-            Start();
+            _ = Stop().ContinueWith(_ => Start(), TaskScheduler.FromCurrentSynchronizationContext());
         }
     }
 
@@ -341,14 +340,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool orchestratorEnabled;
     partial void OnOrchestratorEnabledChanged(bool value)
     {
-        SaveSettings();
+        SaveSettingsDebounced();
         if (_settingsLoaded)
             ApplyOrchestratorEnabledState();
     }
     [ObservableProperty] private string orchestratorStatus = "Не запущен";
     [ObservableProperty] private string orchestratorNextCheck = "—";
     [ObservableProperty] private string orchestratorInterval = "1";
-    partial void OnOrchestratorIntervalChanged(string value) => SaveSettings();
+    partial void OnOrchestratorIntervalChanged(string value) => SaveSettingsDebounced();
     [ObservableProperty] private bool isScanning;
     [ObservableProperty] private string scanProgressText = "";
     public string OrchestratorToggleLabel => OrchestratorRunning ? "Остановить оркестратор" : "Запустить оркестратор";
@@ -356,21 +355,21 @@ public partial class MainViewModel : ObservableObject
 
     // ── Настройки сайтов ──
     [ObservableProperty] private bool siteYouTube = true;
-    partial void OnSiteYouTubeChanged(bool value) => SaveSettings();
+    partial void OnSiteYouTubeChanged(bool value) => SaveSettingsDebounced();
     [ObservableProperty] private bool siteDiscord = true;
-    partial void OnSiteDiscordChanged(bool value) => SaveSettings();
+    partial void OnSiteDiscordChanged(bool value) => SaveSettingsDebounced();
     [ObservableProperty] private bool siteGoogle = true;
-    partial void OnSiteGoogleChanged(bool value) => SaveSettings();
+    partial void OnSiteGoogleChanged(bool value) => SaveSettingsDebounced();
     [ObservableProperty] private bool siteTwitch = true;
-    partial void OnSiteTwitchChanged(bool value) => SaveSettings();
+    partial void OnSiteTwitchChanged(bool value) => SaveSettingsDebounced();
     [ObservableProperty] private bool siteInstagram = true;
-    partial void OnSiteInstagramChanged(bool value) => SaveSettings();
+    partial void OnSiteInstagramChanged(bool value) => SaveSettingsDebounced();
     [ObservableProperty] private bool siteTelegram = true;
-    partial void OnSiteTelegramChanged(bool value) => SaveSettings();
+    partial void OnSiteTelegramChanged(bool value) => SaveSettingsDebounced();
 
     // ── Свои сайты ──
     [ObservableProperty] private string userCustomSitesText = "";
-    partial void OnUserCustomSitesTextChanged(string value) => SaveSettings();
+    partial void OnUserCustomSitesTextChanged(string value) => SaveSettingsDebounced();
 
     private readonly OrchestratorService _orchestrator;
     private readonly AiOrchestratorService _aiOrchestrator;
@@ -424,11 +423,11 @@ public partial class MainViewModel : ObservableObject
 
     // ── Обновления ──
     [ObservableProperty] private bool autoUpdateEnabled = false;
-    partial void OnAutoUpdateEnabledChanged(bool value) => SaveSettings();
+    partial void OnAutoUpdateEnabledChanged(bool value) => SaveSettingsDebounced();
 
     // ── Предупреждение при смене профиля ──
     [ObservableProperty] private bool showProfileSwitchWarning = true;
-    partial void OnShowProfileSwitchWarningChanged(bool value) => SaveSettings();
+    partial void OnShowProfileSwitchWarningChanged(bool value) => SaveSettingsDebounced();
     private bool _suppressProfileWarning;
 
     // ── Системные ──
@@ -436,10 +435,10 @@ public partial class MainViewModel : ObservableObject
     partial void OnAutoStartEnabledChanged(bool value)
     {
         AutoStartService.SetEnabled(value);
-        SaveSettings();
+        SaveSettingsDebounced();
     }
     [ObservableProperty] private bool minimizeToTray = true;
-    partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
+    partial void OnMinimizeToTrayChanged(bool value) => SaveSettingsDebounced();
 
     // ── Обновления (wrappers → UpdatesViewModel) ──
     public string UpdateStatus => Updates.UpdateStatus;
@@ -616,6 +615,13 @@ public partial class MainViewModel : ObservableObject
 
         _orchestratorUiTimer.Tick += (_, _) => UpdateOrchestratorNextCheck();
         _orchestratorUiTimer.Start();
+
+        _saveSettingsDebounce.Tick += (s, e) =>
+        {
+            _saveSettingsDebounce.Stop();
+            SaveSettings();
+        };
+
         _aiOrchestrator.SyncRegistryFromEngine();
         RebuildAiStrategyRows();
         InitializeTgProxyOnStartup();
@@ -725,6 +731,13 @@ public partial class MainViewModel : ObservableObject
             Presets.Add(p);
     }
 
+    public void SaveSettingsDebounced()
+    {
+        if (!_settingsLoaded) return;
+        _saveSettingsDebounce.Stop();
+        _saveSettingsDebounce.Start();
+    }
+
     public void SaveSettings()
     {
         if (!_settingsLoaded) return;
@@ -813,10 +826,10 @@ public partial class MainViewModel : ObservableObject
     private void ToggleLogs() => IsLogsVisible = !IsLogsVisible;
 
     [RelayCommand]
-    private void MainAction()
+    private async Task MainAction()
     {
-        if (IsRunning) Stop();
-        else Start();
+        if (IsRunning) await Stop();
+        else await Start();
     }
 
 
@@ -829,19 +842,24 @@ public partial class MainViewModel : ObservableObject
     }
 
     // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
-    // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
     private void SyncCustomHostlist()
+    {
+        SyncHostlistFile("list-general-user.txt", CustomTargetDomains, false);
+        SyncHostlistFile("list-exclude-user.txt", CustomExcludeDomains, true);
+    }
+
+    private void SyncHostlistFile(string fileName, ObservableCollection<string> sourceList, bool isExclusion)
     {
         try
         {
             var listsDir = Path.Combine(EngineDir, "lists");
             Directory.CreateDirectory(listsDir);
-            var userHostlistPath = Path.Combine(listsDir, "list-general-user.txt");
+            var filePath = Path.Combine(listsDir, fileName);
 
             var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // 1. Берем домены из нового Менеджера доменов (вкладка "Домены")
-            foreach (var d in CustomTargetDomains)
+            // 1. Берем из переданного списка
+            foreach (var d in sourceList)
             {
                 if (!string.IsNullOrWhiteSpace(d))
                     domains.Add(d.Trim());
@@ -852,36 +870,38 @@ public partial class MainViewModel : ObservableObject
             {
                 var legacy = UserCustomSitesText
                     .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Where(s => !s.StartsWith("!"));
+                    .Where(s => isExclusion ? s.StartsWith("!") : !s.StartsWith("!"));
+
                 foreach (var d in legacy)
-                    domains.Add(d.Trim());
+                {
+                    var domain = isExclusion ? d.TrimStart('!').Trim() : d.Trim();
+                    if (!string.IsNullOrWhiteSpace(domain))
+                        domains.Add(domain);
+                }
             }
 
             // Записываем в файл
             if (domains.Count > 0)
             {
-                // Используем явное удаление + запись, чтобы избежать кэширования
-                if (File.Exists(userHostlistPath))
+                if (File.Exists(filePath))
                 {
-                    try { File.SetAttributes(userHostlistPath, FileAttributes.Normal); } catch { }
+                    try { File.SetAttributes(filePath, FileAttributes.Normal); } catch { }
                 }
-                File.WriteAllLines(userHostlistPath, domains.OrderBy(x => x), new UTF8Encoding(false));
-                Logs.Add($"[Sync] Записано {domains.Count} доменов в list-general-user.txt");
+                File.WriteAllLines(filePath, domains.OrderBy(x => x), new UTF8Encoding(false));
+                Logs.Add($"[Sync] Записано {domains.Count} доменов в {fileName}");
             }
             else
             {
-                // Пустой список — удаляем файл или пишем комментарий
-                if (File.Exists(userHostlistPath))
-                    File.Delete(userHostlistPath);
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
                 else
-                    File.WriteAllText(userHostlistPath, "# custom domains empty\n", new UTF8Encoding(false));
-                Logs.Add("[Sync] list-general-user.txt очищен");
+                    File.WriteAllText(filePath, "# custom domains empty\n", new UTF8Encoding(false));
+                Logs.Add($"[Sync] {fileName} очищен");
             }
         }
         catch (Exception ex)
         {
-            Logs.Add($"❌ Ошибка записи list-general-user.txt: {ex.Message}");
-            Logs.Add($"   Stack: {ex.StackTrace?.Split('\n')[0]}");
+            Logs.Add($"❌ Ошибка записи {fileName}: {ex.Message}");
         }
     }
 

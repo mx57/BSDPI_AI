@@ -16,83 +16,93 @@ public partial class MainViewModel
     [ObservableProperty] private bool aiEnabled;
     partial void OnAiEnabledChanged(bool value)
     {
-        SaveSettings();
+        SaveSettingsDebounced();
         if (value)
             RebuildAiStrategyRows();
     }
 
     [ObservableProperty] private bool useUcb1;
-    partial void OnUseUcb1Changed(bool value) => SaveSettings();
+    partial void OnUseUcb1Changed(bool value) => SaveSettingsDebounced();
 
     [ObservableProperty] private int aiExplorationPermil = 100;
-    partial void OnAiExplorationPermilChanged(int value) => SaveSettings();
+    partial void OnAiExplorationPermilChanged(int value) => SaveSettingsDebounced();
 
     [ObservableProperty] private int aiAutoDeleteBelowScore = 60;
-    partial void OnAiAutoDeleteBelowScoreChanged(int value) => SaveSettings();
+    partial void OnAiAutoDeleteBelowScoreChanged(int value) => SaveSettingsDebounced();
 
     [ObservableProperty] private bool useHybridMode;
-    partial void OnUseHybridModeChanged(bool value) => SaveSettings();
+    partial void OnUseHybridModeChanged(bool value) => SaveSettingsDebounced();
 
     [ObservableProperty] private int engineMode;
     partial void OnEngineModeChanged(int value)
     {
-        SaveSettings();
-        _engineManager.SetRunMode(value.ToRunMode());
+        SaveSettingsDebounced();
+        var runMode = value switch
+        {
+            (int)DpiEngineMode.Zapret => DpiRunMode.Standalone,
+            (int)DpiEngineMode.ByeDpi => DpiRunMode.Standalone,
+            (int)DpiEngineMode.Warp => DpiRunMode.Warp,
+            (int)DpiEngineMode.Hybrid => DpiRunMode.Hybrid,
+            (int)DpiEngineMode.WarpZapret => DpiRunMode.WarpZapret,
+            (int)DpiEngineMode.WarpByeDpi => DpiRunMode.WarpByeDpi,
+            _ => DpiRunMode.Standalone
+        };
+        _engineManager.SetRunMode(runMode);
     }
 
     [ObservableProperty] private int byeDpiSocksPort = 1080;
-    partial void OnByeDpiSocksPortChanged(int value) => SaveSettings();
+    partial void OnByeDpiSocksPortChanged(int value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiSplitPos;
-    partial void OnByeDpiSplitPosChanged(string? value) => SaveSettings();
+    partial void OnByeDpiSplitPosChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiDisorderPos = "1";
-    partial void OnByeDpiDisorderPosChanged(string? value) => SaveSettings();
+    partial void OnByeDpiDisorderPosChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiFakePos;
-    partial void OnByeDpiFakePosChanged(string? value) => SaveSettings();
+    partial void OnByeDpiFakePosChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiOobPos;
-    partial void OnByeDpiOobPosChanged(string? value) => SaveSettings();
+    partial void OnByeDpiOobPosChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiTlsrecPos;
-    partial void OnByeDpiTlsrecPosChanged(string? value) => SaveSettings();
+    partial void OnByeDpiTlsrecPosChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private int? byeDpiFakeTtl;
-    partial void OnByeDpiFakeTtlChanged(int? value) => SaveSettings();
+    partial void OnByeDpiFakeTtlChanged(int? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private bool byeDpiAutoTtl;
-    partial void OnByeDpiAutoTtlChanged(bool value) => SaveSettings();
+    partial void OnByeDpiAutoTtlChanged(bool value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiAutoMode = "torst";
-    partial void OnByeDpiAutoModeChanged(string? value) => SaveSettings();
+    partial void OnByeDpiAutoModeChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private int? byeDpiTimeout;
-    partial void OnByeDpiTimeoutChanged(int? value) => SaveSettings();
+    partial void OnByeDpiTimeoutChanged(int? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiHosts;
-    partial void OnByeDpiHostsChanged(string? value) => SaveSettings();
+    partial void OnByeDpiHostsChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiHostlist;
-    partial void OnByeDpiHostlistChanged(string? value) => SaveSettings();
+    partial void OnByeDpiHostlistChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiFakeTlsMod;
-    partial void OnByeDpiFakeTlsModChanged(string? value) => SaveSettings();
+    partial void OnByeDpiFakeTlsModChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiFakeSni;
-    partial void OnByeDpiFakeSniChanged(string? value) => SaveSettings();
+    partial void OnByeDpiFakeSniChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiFakeData;
-    partial void OnByeDpiFakeDataChanged(string? value) => SaveSettings();
+    partial void OnByeDpiFakeDataChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string? byeDpiModHttp;
-    partial void OnByeDpiModHttpChanged(string? value) => SaveSettings();
+    partial void OnByeDpiModHttpChanged(string? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private int? byeDpiTlsminor;
-    partial void OnByeDpiTlsminorChanged(int? value) => SaveSettings();
+    partial void OnByeDpiTlsminorChanged(int? value) => SaveSettingsDebounced();
 
     [ObservableProperty] private bool byeDpiMd5sig;
-    partial void OnByeDpiMd5sigChanged(bool value) => SaveSettings();
+    partial void OnByeDpiMd5sigChanged(bool value) => SaveSettingsDebounced();
 
     [ObservableProperty] private string aiNetworkLabel = "—";
     [ObservableProperty] private string aiGenerationText = "—";
@@ -214,7 +224,8 @@ public partial class MainViewModel
     {
         try
         {
-            var csv = _aiHistoryStore.GetHistoryCsv(id => _aiRegistry.GetById(id)?.DisplayName ?? id.ToString());
+            var displayNameMap = _aiRegistry.GetGenomes().ToDictionary(g => g.Id, g => g.DisplayName);
+            var csv = _aiHistoryStore.GetHistoryCsv(id => _aiRegistry.GetById(id)?.DisplayName ?? id.ToString(), displayNameMap);
 
             var sfd = new Microsoft.Win32.SaveFileDialog
             {
