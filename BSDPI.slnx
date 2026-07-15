@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="BSDPI.Core.Tests/BSDPI.Core.Tests.csproj" />
+  <Project Path="BSDPI.AI/BSDPI.AI.csproj" />
+  <Project Path="BSDPI.Core/BSDPI.Core.csproj" />
+  <Project Path="BSDPI.Updater/BSDPI.Updater.csproj" />
+  <Project Path="BSDPI/BSDPI.csproj" />
+</Solution>

@@ -1,4 +1,4 @@
-# FluxRoute AI — Итоги сессии
+# BSDPI AI — Итоги сессии
 
 ## Дата: 2026-06-17
 
@@ -23,11 +23,11 @@
 
 ### 2. Воссоздание компонентов Конструктора ✅
 Файлы, потерянные при git reset и воссозданные:
-- `FluxRoute/Controls/NodeCanvas.cs` — Canvas с drag-and-drop, zoom, pan
-- `FluxRoute/Controls/NodeControl.cs` — UserControl для нод
-- `FluxRoute/Controls/ConnectionLine.cs` — Bezier-линии
-- `FluxRoute/ViewModels/ChainBuilderViewModel.cs` — CRUD операции
-- `FluxRoute/Converters/NullToVisibilityConverter.cs`
+- `BSDPI/Controls/NodeCanvas.cs` — Canvas с drag-and-drop, zoom, pan
+- `BSDPI/Controls/NodeControl.cs` — UserControl для нод
+- `BSDPI/Controls/ConnectionLine.cs` — Bezier-линии
+- `BSDPI/ViewModels/ChainBuilderViewModel.cs` — CRUD операции
+- `BSDPI/Converters/NullToVisibilityConverter.cs`
 - Вкладка «Конструктор» (tab 11) в MainWindow.xaml
 
 **Интеграция:**
@@ -37,7 +37,7 @@
 
 ### 3. GPL v3 Compliance ✅
 **Исправления:**
-- `AppUpdaterService.cs`: URLs переключены с `klondike0x/FluxRoute` на `mx57/FluxRoute_AI`
+- `AppUpdaterService.cs`: URLs переключены с `klondike0x/BSDPI` на `mx57/BSDPI_AI`
 - `Directory.Build.props`: добавлены метаданные (Authors, Copyright, License, RepositoryUrl)
 - `NOTICE`: созд файл с атрибуцией upstream и сторонних компонентов
 
@@ -60,7 +60,7 @@
 ### 6. PR создан ✅
 - Ветка `fix/readme-disclaimer` → `master`
 - Только файлы README.md и README.en.md
-- URL: https://github.com/mx57/FluxRoute_AI/pull/16
+- URL: https://github.com/mx57/BSDPI_AI/pull/16
 
 ## Статус выполнения
 
@@ -84,18 +84,18 @@
 - `AGENTS.md` — шпаргалка для агентов
 - `Directory.Build.props` — лицензионные метаданные
 - `NOTICE` — атрибуция компонентов
-- `FluxRoute/Controls/NodeCanvas.cs`
-- `FluxRoute/Controls/NodeControl.cs`
-- `FluxRoute/Controls/ConnectionLine.cs`
-- `FluxRoute/ViewModels/ChainBuilderViewModel.cs`
-- `FluxRoute/Converters/NullToVisibilityConverter.cs`
+- `BSDPI/Controls/NodeCanvas.cs`
+- `BSDPI/Controls/NodeControl.cs`
+- `BSDPI/Controls/ConnectionLine.cs`
+- `BSDPI/ViewModels/ChainBuilderViewModel.cs`
+- `BSDPI/Converters/NullToVisibilityConverter.cs`
 
 ### Изменённые файлы:
-- `FluxRoute.Updater/Services/AppUpdaterService.cs` — URLs → mx57/FluxRoute_AI
-- `FluxRoute/ViewModels/MainViewModel.cs` — добавлен ChainBuilder
-- `FluxRoute/App.xaml.cs` — добавлен ChainStore в DI
-- `FluxRoute/Views/MainWindow.xaml` — вкладка «Конструктор»
-- `FluxRoute/Views/MainWindow.xaml.cs` — code-behind для конструктора
+- `BSDPI.Updater/Services/AppUpdaterService.cs` — URLs → mx57/BSDPI_AI
+- `BSDPI/ViewModels/MainViewModel.cs` — добавлен ChainBuilder
+- `BSDPI/App.xaml.cs` — добавлен ChainStore в DI
+- `BSDPI/Views/MainWindow.xaml` — вкладка «Конструктор»
+- `BSDPI/Views/MainWindow.xaml.cs` — code-behind для конструктора
 - `README.md` — отказ от ответственности
 - `README.en.md` — disclaimer
 

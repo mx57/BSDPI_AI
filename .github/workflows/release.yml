@@ -1,4 +1,4 @@
-name: Build and Release FluxRoute
+name: Build and Release BSDPI
 
 on:
   workflow_dispatch:
@@ -33,7 +33,7 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          [xml]$csproj = Get-Content .\FluxRoute\FluxRoute.csproj
+          [xml]$csproj = Get-Content .\BSDPI\BSDPI.csproj
           $ver = $csproj.Project.PropertyGroup.Version
           "VERSION=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "TAG=v$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
@@ -46,25 +46,38 @@ jobs:
           $expectedTag = "v${{ steps.version.outputs.VERSION }}"
           $actualTag = "${{ github.ref_name }}"
           if ($actualTag -ne $expectedTag) {
-            Write-Error "Tag mismatch: pushed tag '$actualTag' does not match version in .csproj '$expectedTag'. Please update the version in FluxRoute.csproj before pushing the tag."
+            Write-Error "Tag mismatch: pushed tag '$actualTag' does not match version in .csproj '$expectedTag'. Please update the version in BSDPI.csproj before pushing the tag."
             exit 1
           }
           Write-Host "Tag '$actualTag' matches version in .csproj. OK."
 
       - name: Restore solution
-        run: dotnet restore .\FluxRoute.slnx
+        run: dotnet restore .\BSDPI.slnx
 
       - name: Run tests
-        run: dotnet test .\FluxRoute.slnx --configuration Release --no-restore
+        run: dotnet test .\BSDPI.slnx --configuration Release --no-restore
 
       - name: Publish win-x64
-        run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\publish
+        run: dotnet publish .\BSDPI\BSDPI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\publish
+
+      - name: Bundle Flowseal engine
+        shell: pwsh
+        run: |
+          # engine/ (winws.exe, WinDivert.dll, BAT-профили) не входит в сборку .NET,
+          # но необходим для работы zapret. Копируем из репозитория в publish,
+          # чтобы портабельный релиз был самодостаточным.
+          if (Test-Path .\engine) {
+            Copy-Item -Recurse -Force .\engine .\publish\engine
+            Write-Host "Engine bundled into publish/engine"
+          } else {
+            Write-Warning "engine/ not found in repo — portable release will lack winws.exe"
+          }
 
       - name: Create ZIP
         shell: pwsh
         run: |
           $tag = "${{ steps.version.outputs.TAG }}"
-          Compress-Archive -Path .\publish\* -DestinationPath ".\FluxRoute-$tag-portable.zip" -Force
+          Compress-Archive -Path .\publish\* -DestinationPath ".\BSDPI-$tag-portable.zip" -Force
 
       - name: Create or update GitHub Release
         shell: pwsh
@@ -72,7 +85,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $tag = "${{ steps.version.outputs.TAG }}"
-          $zip = ".\FluxRoute-$tag-portable.zip"
+          $zip = ".\BSDPI-$tag-portable.zip"
 
           gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
 

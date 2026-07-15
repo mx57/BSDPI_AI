@@ -1,4 +1,4 @@
-name: Build and Release FluxRoute AI
+name: Build and Release BSDPI AI
 
 on:
   push:
@@ -49,7 +49,7 @@ jobs:
         echo "tag=$tag" >> $env:GITHUB_OUTPUT
 
     - name: Build application
-      run: dotnet publish FluxRoute/FluxRoute.csproj `
+      run: dotnet publish BSDPI/BSDPI.csproj `
         --configuration Release `
         --runtime win-x64 `
         --self-contained false `
@@ -62,7 +62,7 @@ jobs:
       shell: pwsh
       run: |
         $version = "${{ steps.get_version.outputs.version }}"
-        $zipName = "FluxRoute_AI-v$version-portable.zip"
+        $zipName = "BSDPI_AI-v$version-portable.zip"
         Compress-Archive -Path ./publish/* -DestinationPath ./$zipName
         echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
       id: create_zip
@@ -80,21 +80,21 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: ${{ steps.create_zip.outputs.zip_name }}
-        name: FluxRoute AI ${{ steps.get_version.outputs.tag }}
+        name: BSDPI AI ${{ steps.get_version.outputs.tag }}
         body: |
-          ## FluxRoute AI ${{ steps.get_version.outputs.tag }}
+          ## BSDPI AI ${{ steps.get_version.outputs.tag }}
           
           ### Установка
           1. Скачайте `${{ steps.create_zip.outputs.zip_name }}`
-          2. Распакуйте в любую папку (например, `C:\FluxRoute_AI\`)
-          3. Запустите `FluxRoute.exe` **от имени администратора**
+          2. Распакуйте в любую папку (например, `C:\BSDPI_AI\`)
+          3. Запустите `BSDPI.exe` **от имени администратора**
           
           ### Проверка целостности
           **SHA-256:** `${{ steps.sha256.outputs.hash }}`
           
           Проверить хеш можно командой:
           ```powershell
-          Get-FileHash -Path FluxRoute_AI-v${{ steps.get_version.outputs.version }}-portable.zip -Algorithm SHA256
+          Get-FileHash -Path BSDPI_AI-v${{ steps.get_version.outputs.version }}-portable.zip -Algorithm SHA256
           ```
           
           ### Требования
@@ -116,6 +116,6 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: FluxRoute_AI-${{ steps.get_version.outputs.version }}
+        name: BSDPI_AI-${{ steps.get_version.outputs.version }}
         path: ${{ steps.create_zip.outputs.zip_name }}
         retention-days: 30

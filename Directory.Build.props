@@ -1,10 +1,10 @@
 <Project>
   <PropertyGroup>
     <Authors>mx57</Authors>
-    <Copyright>Copyright (C) 2026 mx57. Based on klondike0x/FluxRoute (GPLv3).</Copyright>
+    <Copyright>Copyright (C) 2026 mx57. Based on klondike0x/BSDPI (GPLv3).</Copyright>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/mx57/FluxRoute_AI</RepositoryUrl>
+    <RepositoryUrl>https://github.com/mx57/BSDPI_AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <Description>FluxRoute AI — smart automation for zapret profile switching with self-learning AI</Description>
+    <Description>BSDPI AI — smart automation for zapret profile switching with self-learning AI</Description>
   </PropertyGroup>
 </Project>
