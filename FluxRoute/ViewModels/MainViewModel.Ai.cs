@@ -208,7 +208,7 @@ public partial class MainViewModel
         {
         }
 
-        _aiOrchestrator.SyncRegistryFromEngine();
+        _ = _aiOrchestrator.SyncRegistryFromEngineAsync();
         LoadProfiles();
         RefreshAiDashboard();
         RebuildAiStrategyRows();

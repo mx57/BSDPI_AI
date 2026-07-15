@@ -292,7 +292,7 @@ public partial class MainViewModel : ObservableObject
         if (value == 2) RebuildAiStrategyRows();
         if (value == 3)
         {
-            _aiOrchestrator.SyncRegistryFromEngine();
+            _ = _aiOrchestrator.SyncRegistryFromEngineAsync();
             RefreshAiDashboard();
             RebuildAiStrategyRows();
         }
@@ -622,7 +622,7 @@ public partial class MainViewModel : ObservableObject
             SaveSettings();
         };
 
-        _aiOrchestrator.SyncRegistryFromEngine();
+        _ = _aiOrchestrator.SyncRegistryFromEngineAsync();
         RebuildAiStrategyRows();
         InitializeTgProxyOnStartup();
 
@@ -856,30 +856,16 @@ public partial class MainViewModel : ObservableObject
             Directory.CreateDirectory(listsDir);
             var filePath = Path.Combine(listsDir, fileName);
 
-            SyncFile("list-general-user.txt", CustomTargetDomains, false);
-            SyncFile("list-exclude-user.txt", CustomExcludeDomains, true);
-
-            UpdateOrchestratorEnabledSites();
-        }
-        catch (Exception ex)
-        {
-            Logs.Add($"❌ Ошибка синхронизации списков доменов: {ex.Message}");
-            Logs.Add($"   Stack: {ex.StackTrace?.Split('\n')[0]}");
-        }
-
-        void SyncFile(string fileName, System.Collections.ObjectModel.ObservableCollection<string> modernList, bool isExclude)
-        {
-            var path = Path.Combine(EngineDir, "lists", fileName);
             var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // 1. Берем из переданного списка
+            // 1. Берем из современного списка (ObservableCollection)
             foreach (var d in sourceList)
             {
                 if (!string.IsNullOrWhiteSpace(d))
                     domains.Add(d.Trim());
             }
 
-            // 2. Legacy list from TextBox
+            // 2. Legacy list from TextBox (UserCustomSitesText)
             if (!string.IsNullOrWhiteSpace(UserCustomSitesText))
             {
                 var legacy = UserCustomSitesText
@@ -911,6 +897,8 @@ public partial class MainViewModel : ObservableObject
                     File.WriteAllText(filePath, "# custom domains empty\n", new UTF8Encoding(false));
                 Logs.Add($"[Sync] {fileName} очищен");
             }
+
+            UpdateOrchestratorEnabledSites();
         }
         catch (Exception ex)
         {

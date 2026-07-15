@@ -309,15 +309,6 @@ public sealed class StrategyEvolver
                 g.AutoTtl = false;
                 g.DisorderPos = "1+s";
                 break;
-            case 12:
-                g.OobPos = OobPosCandidates[_rng.Next(OobPosCandidates.Length)];
-                break;
-            case 13:
-                g.DisoobPos = DisoobPosCandidates[_rng.Next(DisoobPosCandidates.Length)];
-                break;
-            case 14:
-                g.TlsrecPos = TlsrecPosCandidates[_rng.Next(TlsrecPosCandidates.Length)];
-                break;
             default:
                 if (g.SplitPosSemantic is not null)
                     g.SplitPos = _rng.Next(16, 180);

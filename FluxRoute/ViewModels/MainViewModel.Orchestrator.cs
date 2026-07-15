@@ -363,8 +363,12 @@ public partial class MainViewModel
             {
                 AiStrategyRows.RemoveAt(AiStrategyRows.Count - 1);
             }
-
-                var isPareto = paretoSet.Contains(g.Id);
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"[ИИ] Ошибка обновления списка стратегий: {ex.Message}");
+        }
+    }
 
     private Task EnsureProtectionRunningAsync()
     {

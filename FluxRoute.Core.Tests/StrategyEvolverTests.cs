@@ -76,16 +76,16 @@ public sealed class StrategyEvolverTests
         var method = typeof(StrategyEvolver).GetMethod("MutateZapret", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         Assert.NotNull(method);
 
-        // Case 12: OobPos
-        method!.Invoke(evolver, [g, 12]);
+        // Case 11: OobPos
+        method!.Invoke(evolver, [g, 11]);
         Assert.NotNull(g.OobPos);
 
-        // Case 13: DisoobPos
-        method!.Invoke(evolver, [g, 13]);
+        // Case 12: DisoobPos
+        method!.Invoke(evolver, [g, 12]);
         Assert.NotNull(g.DisoobPos);
 
-        // Case 14: TlsrecPos
-        method!.Invoke(evolver, [g, 14]);
+        // Case 13: TlsrecPos
+        method!.Invoke(evolver, [g, 13]);
         Assert.NotNull(g.TlsrecPos);
 
         // Verify IsValid accepts these
