@@ -20,7 +20,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
     private readonly Func<bool> _getAutoUpdateEnabled;
     private readonly Func<string> _getCurrentEngineVersion;
     private readonly Action<string> _setCurrentEngineVersion;
-    private readonly Action _stopEngine;
+    private readonly Func<Task> _stopEngine;
     private readonly Action _loadProfiles;
     private readonly Action _refreshDiagnostics;
     private readonly Action<string> _addAppLog;
@@ -69,7 +69,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         Func<bool> getAutoUpdateEnabled,
         Func<string> getCurrentEngineVersion,
         Action<string> setCurrentEngineVersion,
-        Action stopEngine,
+        Func<Task> stopEngine,
         Action loadProfiles,
         Action refreshDiagnostics,
         Action<string> addAppLog,
@@ -218,7 +218,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
     {
         if (_pendingUpdate is null) return;
         IsUpdating = true;
-        _stopEngine();
+        await _stopEngine();
 
         var success = await _updater.InstallUpdateAsync(EngineDir, _pendingUpdate,
             msg =>

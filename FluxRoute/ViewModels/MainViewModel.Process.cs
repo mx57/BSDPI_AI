@@ -73,16 +73,16 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void ToggleStartStop()
+    private async Task ToggleStartStop()
     {
         if (IsRunning)
-            Stop();
+            await Stop();
         else
-            Start();
+            await Start();
     }
 
     [RelayCommand]
-    private void Start()
+    private async Task Start()
     {
         if (IsRunning)
         {
@@ -111,13 +111,13 @@ public partial class MainViewModel
 
             if (ProfileBatLauncher.TryCreateLaunchPlan(SelectedProfile.FullPath, EngineDir, out var plan, out var parseError) && plan is not null)
             {
-                StartWinwsDirect(plan);
+                await StartWinwsDirect(plan);
                 return;
             }
 
             Logs.Add($"⚠️ Прямой запуск winws.exe недоступен: {parseError}");
             Logs.Add("⚠️ Использую совместимый запуск через BAT/cmd.exe.");
-            StartViaBatFallback();
+            await StartViaBatFallback();
         }
         catch (Exception ex)
         {
@@ -126,7 +126,7 @@ public partial class MainViewModel
         }
     }
 
-    private void StartWinwsDirect(WinwsLaunchPlan plan)
+    private async Task StartWinwsDirect(WinwsLaunchPlan plan)
     {
         var winws = ProfileBatLauncher.StartWinws(plan);
         _startedViaBatFallback = false;
@@ -142,7 +142,7 @@ public partial class MainViewModel
         TryStartOrchestratorIfEnabled();
 
         if (UseHybridMode)
-            _ = StartByeDpiAsync();
+            await StartByeDpiAsync();
 
         Application.Current?.Dispatcher.BeginInvoke(() =>
         {
@@ -182,7 +182,7 @@ public partial class MainViewModel
         }
     }
 
-    private void StartViaBatFallback()
+    private async Task StartViaBatFallback()
     {
         var psi = new ProcessStartInfo
         {
@@ -223,7 +223,7 @@ public partial class MainViewModel
         }, System.Windows.Threading.DispatcherPriority.Background);
 
         if (UseHybridMode)
-            _ = StartByeDpiAsync();
+            await StartByeDpiAsync();
     }
 
     private async Task TrackDirectWinwsAsync(Process winws)
@@ -377,7 +377,7 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void Stop()
+    private async Task Stop()
     {
         _hideWindowsCts?.Cancel();
 
@@ -425,7 +425,9 @@ public partial class MainViewModel
             {
                 using var p = Process.GetProcessById((int)pid);
                 p.Kill(entireProcessTree: true);
-                p.WaitForExit(1500);
+
+                using var cts = new CancellationTokenSource(2000);
+                await p.WaitForExitAsync(cts.Token);
                 killed++;
             }
             catch
@@ -448,7 +450,7 @@ public partial class MainViewModel
         IsRunning = false;
         _runStartedAt = null;
 
-        try { _ = _engineManager.StopAllAsync(); }
+        try { await _engineManager.StopAllAsync(); }
         catch { }
 
         if (!_suppressOrchestratorStop)
