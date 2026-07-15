@@ -218,6 +218,7 @@ public partial class MainViewModel
     /// <summary>
     /// Exports the AI history to a CSV file.
     /// BOLT ⚡: Uses UTF-8 with BOM for Excel compatibility.
+    /// BOLT ⚡: Pre-calculates display name map to avoid repeated lock acquisitions during export.
     /// </summary>
     [RelayCommand]
     private void ExportHistory()

@@ -13,8 +13,9 @@ public sealed class StrategyEvolver
     private static readonly string[] SplitPosCandidates = ["1", "2", "3", "7", "10", "1+s", "2+s", "3+s", "host", "midsld", "sniext"];
     private static readonly string[] DisorderPosCandidates = ["1", "3", "5", "1+s", "3+s"];
     private static readonly string[] FakePosCandidates = ["-1", "3", "7", "10"];
-    private static readonly string[] OobPosCandidates = ["3+s", "5+s", "7"];
-    private static readonly string[] TlsrecPosCandidates = ["1+s", "3+s", "7"];
+    private static readonly string[] OobPosCandidates = ["1", "3", "7", "10", "3+s", "5+s"];
+    private static readonly string[] DisoobPosCandidates = ["1", "3", "7", "10"];
+    private static readonly string[] TlsrecPosCandidates = ["1", "3", "7", "1+s", "3+s"];
     private static readonly string[] ModHttpCandidates = ["hcsmix", "dcsmix", "rmspace", "hcsmix,dcsmix", "hcsmix,rmspace"];
     private static readonly string[] FoolingCandidates = ["md5sig", "badseq", "datanoack", "hopbyhop", "hopbyhop2", "badsum"];
     private static readonly string[] AnyProtocolCandidates = ["0", "1"];
@@ -292,6 +293,15 @@ public sealed class StrategyEvolver
                 g.FakePos = FakePosCandidates[_rng.Next(FakePosCandidates.Length)];
                 break;
             case 11:
+                g.OobPos = OobPosCandidates[_rng.Next(OobPosCandidates.Length)];
+                break;
+            case 12:
+                g.DisoobPos = DisoobPosCandidates[_rng.Next(DisoobPosCandidates.Length)];
+                break;
+            case 13:
+                g.TlsrecPos = TlsrecPosCandidates[_rng.Next(TlsrecPosCandidates.Length)];
+                break;
+            case 14:
                 g.EngineType = DpiEngineType.ByeDpi;
                 g.SplitPos = null;
                 g.SplitPosSemantic = null;

@@ -99,6 +99,24 @@ public sealed partial class AiStrategyRowVm : ObservableObject
             $"Результат последней проверки: {g.LastVerificationScore}% — итоговый счёт по выбранным сайтам и стабильности winws.\n" +
             $"Время: {t:HH:mm} — когда завершилась последняя проверка этой стратегии ({t:dd.MM.yyyy}).";
     }
+
+    /// <summary>
+    /// Updates the row in-place with new data.
+    /// BOLT ⚡: Prevents UI flickering and collection rebuilding overhead.
+    /// </summary>
+    public void Update(StrategyGenome g, int successes, int trials, double wilsonLower, bool isPareto, string lStats, string lLatency)
+    {
+        _suppress = true;
+        IsEnabled = g.OrchestratorEnabled;
+        _suppress = false;
+
+        IsPareto = isPareto;
+        LocalStats = lStats;
+        AvgLatencyText = lLatency;
+
+        ApplyWilson(successes, trials, wilsonLower);
+        ApplyVerification(g);
+    }
 }
 
 public partial class MainViewModel
@@ -346,12 +364,7 @@ public partial class MainViewModel
                 AiStrategyRows.RemoveAt(AiStrategyRows.Count - 1);
             }
 
-            OnPropertyChanged(nameof(AiStrategyRowCount));
-        }
-        catch
-        {
-        }
-    }
+                var isPareto = paretoSet.Contains(g.Id);
 
     private Task EnsureProtectionRunningAsync()
     {
