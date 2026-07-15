@@ -68,7 +68,7 @@ public static class StrategyGenomeValidator
         if (g.FakeTtl is < 1 or > 128)
             g.FakeTtl = null;
 
-        // BOLT ⚡: Preserving OobPos, DisoobPos, and TlsrecPos as they are valid for all winws desync modes.
+        // BOLT ⚡: New positions (oob, disoob, tlsrec) are valid for all desync modes in winws.
     }
 
     private static void NormalizeByeDpi(StrategyGenome g)

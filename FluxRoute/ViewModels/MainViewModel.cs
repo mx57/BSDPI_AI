@@ -856,6 +856,20 @@ public partial class MainViewModel : ObservableObject
             Directory.CreateDirectory(listsDir);
             var filePath = Path.Combine(listsDir, fileName);
 
+            SyncFile("list-general-user.txt", CustomTargetDomains, false);
+            SyncFile("list-exclude-user.txt", CustomExcludeDomains, true);
+
+            UpdateOrchestratorEnabledSites();
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"❌ Ошибка синхронизации списков доменов: {ex.Message}");
+            Logs.Add($"   Stack: {ex.StackTrace?.Split('\n')[0]}");
+        }
+
+        void SyncFile(string fileName, System.Collections.ObjectModel.ObservableCollection<string> modernList, bool isExclude)
+        {
+            var path = Path.Combine(EngineDir, "lists", fileName);
             var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             // 1. Берем из переданного списка
@@ -865,7 +879,7 @@ public partial class MainViewModel : ObservableObject
                     domains.Add(d.Trim());
             }
 
-            // 2. Подхватываем из старого TextBox (для обратной совместимости)
+            // 2. Legacy list from TextBox
             if (!string.IsNullOrWhiteSpace(UserCustomSitesText))
             {
                 var legacy = UserCustomSitesText
@@ -880,7 +894,6 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            // Записываем в файл
             if (domains.Count > 0)
             {
                 if (File.Exists(filePath))

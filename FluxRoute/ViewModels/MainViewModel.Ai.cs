@@ -4,6 +4,7 @@ using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.AI.Models;
+using FluxRoute.Core.Extensions;
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 using Application = System.Windows.Application;
@@ -116,7 +117,7 @@ public partial class MainViewModel
             ExplorationRatePermil = AiExplorationPermil,
             AutoDeleteBelowScore = AiAutoDeleteBelowScore,
             EngineMode = EngineMode,
-            UseHybridMode = EngineMode == 2,
+            UseHybridMode = EngineMode == (int)DpiEngineMode.Hybrid,
             ByeDpiSocksPort = ByeDpiSocksPort,
             ByeDpiDefaults = BuildByeDpiDefaultsSnapshot(),
         };
@@ -217,6 +218,7 @@ public partial class MainViewModel
     /// <summary>
     /// Exports the AI history to a CSV file.
     /// BOLT ⚡: Uses UTF-8 with BOM for Excel compatibility.
+    /// BOLT ⚡: Pre-calculates display name map to avoid repeated lock acquisitions during export.
     /// </summary>
     [RelayCommand]
     private void ExportHistory()

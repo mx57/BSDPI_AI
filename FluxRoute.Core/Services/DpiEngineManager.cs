@@ -124,7 +124,9 @@ public sealed class DpiEngineManager : IDisposable
 
             case DpiRunMode.WarpZapret:
                 await StopAllAsync(ct).ConfigureAwait(false);
-                var w1 = await StartAsync(DpiEngineType.Warp, CloneWithDefaults(DpiEngineType.Warp), ct).ConfigureAwait(false);
+                var w1 = await StartAsync(DpiEngineType.Warp,
+                    profile.EngineType == DpiEngineType.Warp ? profile : CloneWithDefaults(DpiEngineType.Warp),
+                    ct).ConfigureAwait(false);
                 var z1 = await StartAsync(DpiEngineType.Zapret,
                     profile.EngineType == DpiEngineType.Zapret ? profile : CloneWithDefaults(DpiEngineType.Zapret),
                     ct).ConfigureAwait(false);
@@ -132,7 +134,9 @@ public sealed class DpiEngineManager : IDisposable
 
             case DpiRunMode.WarpByeDpi:
                 await StopAllAsync(ct).ConfigureAwait(false);
-                var w2 = await StartAsync(DpiEngineType.Warp, CloneWithDefaults(DpiEngineType.Warp), ct).ConfigureAwait(false);
+                var w2 = await StartAsync(DpiEngineType.Warp,
+                    profile.EngineType == DpiEngineType.Warp ? profile : CloneWithDefaults(DpiEngineType.Warp),
+                    ct).ConfigureAwait(false);
                 var b2 = await StartAsync(DpiEngineType.ByeDpi,
                     profile.EngineType == DpiEngineType.ByeDpi ? profile : CloneWithDefaults(DpiEngineType.ByeDpi),
                     ct).ConfigureAwait(false);
@@ -140,7 +144,9 @@ public sealed class DpiEngineManager : IDisposable
 
             case DpiRunMode.WarpZapretChained:
                 await StopAllAsync(ct).ConfigureAwait(false);
-                var wc1 = await StartAsync(DpiEngineType.Warp, CloneWithDefaults(DpiEngineType.Warp), ct).ConfigureAwait(false);
+                var wc1 = await StartAsync(DpiEngineType.Warp,
+                    profile.EngineType == DpiEngineType.Warp ? profile : CloneWithDefaults(DpiEngineType.Warp),
+                    ct).ConfigureAwait(false);
                 var zc1 = await StartAsync(DpiEngineType.Zapret,
                     ConfigureChained(profile.EngineType == DpiEngineType.Zapret ? CloneProfile(profile) : CloneWithDefaults(DpiEngineType.Zapret), 8086),
                     ct).ConfigureAwait(false);
@@ -148,7 +154,9 @@ public sealed class DpiEngineManager : IDisposable
 
             case DpiRunMode.WarpByeDpiChained:
                 await StopAllAsync(ct).ConfigureAwait(false);
-                var wc2 = await StartAsync(DpiEngineType.Warp, CloneWithDefaults(DpiEngineType.Warp), ct).ConfigureAwait(false);
+                var wc2 = await StartAsync(DpiEngineType.Warp,
+                    profile.EngineType == DpiEngineType.Warp ? profile : CloneWithDefaults(DpiEngineType.Warp),
+                    ct).ConfigureAwait(false);
                 var bc2 = await StartAsync(DpiEngineType.ByeDpi,
                     ConfigureChained(profile.EngineType == DpiEngineType.ByeDpi ? CloneProfile(profile) : CloneWithDefaults(DpiEngineType.ByeDpi), 8086),
                     ct).ConfigureAwait(false);

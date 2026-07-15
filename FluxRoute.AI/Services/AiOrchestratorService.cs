@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using FluxRoute.AI.Models;
 using FluxRoute.AI.Stats;
+using FluxRoute.Core.Extensions;
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 
@@ -287,6 +288,20 @@ public sealed class AiOrchestratorService : IDisposable
         }
     }
 
+    private string GetEngineModeDisplayName(int mode)
+    {
+        return mode switch
+        {
+            (int)DpiEngineMode.Zapret => "Zapret",
+            (int)DpiEngineMode.ByeDpi => "ByeDPI",
+            (int)DpiEngineMode.Warp => "Warp",
+            (int)DpiEngineMode.Hybrid => "Hybrid",
+            (int)DpiEngineMode.WarpZapret => "Warp + Zapret",
+            (int)DpiEngineMode.WarpByeDpi => "Warp + ByeDPI",
+            _ => "Unknown"
+        };
+    }
+
     private async Task PickAndApplyInitialAsync(CancellationToken ct)
     {
         var fp = _fingerprints.Capture();
@@ -296,8 +311,9 @@ public sealed class AiOrchestratorService : IDisposable
         var pool = GenePool();
         if (pool.Count == 0)
         {
+            var modeName = GetEngineModeDisplayName(_aiSettings().EngineMode);
             Notify(_registry.GetGenomes().Count > 0
-                ? "ИИ: нет включённых стратегий. Включите хотя бы одну на вкладке «Оркестратор»."
+                ? $"ИИ: нет включённых стратегий для режима {modeName}."
                 : "ИИ: нет профилей/genomes в engine/. Обновите Flowseal.");
             return;
         }
@@ -475,8 +491,9 @@ public sealed class AiOrchestratorService : IDisposable
 
         if (pick is null)
         {
+            var modeName = GetEngineModeDisplayName(_aiSettings().EngineMode);
             Notify(pool.Count == 0
-                ? $"ИИ: нет включённых стратегий для режима {(_aiSettings().EngineMode switch { 1 => "ByeDPI", 2 => "Hybrid", _ => "Zapret" })}."
+                ? $"ИИ: нет включённых стратегий для режима {modeName}."
                 : "ИИ: нет доступной стратегии после смены сети.");
             return;
         }
@@ -507,7 +524,7 @@ public sealed class AiOrchestratorService : IDisposable
         var engineDir = _engineDir();
         var profile = g.ToEngineProfile();
 
-        var runMode = _aiSettings().EngineMode == 2 ? DpiRunMode.Hybrid : DpiRunMode.Standalone;
+        var runMode = _aiSettings().EngineMode.ToRunMode();
         _engineManager.SetRunMode(runMode);
 
         var started = await _engineManager.ApplyProfileAsync(profile, ct).ConfigureAwait(false);
@@ -720,7 +737,7 @@ public sealed class AiOrchestratorService : IDisposable
         var engineDir = _engineDir();
         var profile = g.ToEngineProfile();
 
-        var runMode = _aiSettings().EngineMode == 2 ? DpiRunMode.Hybrid : DpiRunMode.Standalone;
+        var runMode = _aiSettings().EngineMode.ToRunMode();
         _engineManager.SetRunMode(runMode);
 
         var started = await _engineManager.ApplyProfileAsync(profile, ct).ConfigureAwait(false);
