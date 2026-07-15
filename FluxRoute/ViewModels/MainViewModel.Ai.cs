@@ -171,7 +171,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task RunAiEvolutionAsync()
     {
-        _aiOrchestrator.SyncRegistryFromEngine();
+        await _aiOrchestrator.SyncRegistryFromEngineAsync();
         await _aiOrchestrator.EvolveNowAsync().ConfigureAwait(true);
         var d = Application.Current?.Dispatcher;
         if (d is not null && !d.CheckAccess())

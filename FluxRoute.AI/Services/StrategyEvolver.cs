@@ -235,6 +235,7 @@ public sealed class StrategyEvolver
 
     private void Mutate(StrategyGenome g)
     {
+        // BOLT ⚡: Mutation roll range expanded to cover new Zapret positions.
         var roll = _rng.Next(15);
 
         if (g.EngineType == DpiEngineType.ByeDpi)
@@ -307,6 +308,15 @@ public sealed class StrategyEvolver
                 g.SplitPosSemantic = null;
                 g.AutoTtl = false;
                 g.DisorderPos = "1+s";
+                break;
+            case 12:
+                g.OobPos = OobPosCandidates[_rng.Next(OobPosCandidates.Length)];
+                break;
+            case 13:
+                g.DisoobPos = DisoobPosCandidates[_rng.Next(DisoobPosCandidates.Length)];
+                break;
+            case 14:
+                g.TlsrecPos = TlsrecPosCandidates[_rng.Next(TlsrecPosCandidates.Length)];
                 break;
             default:
                 if (g.SplitPosSemantic is not null)
@@ -391,11 +401,9 @@ public sealed class StrategyEvolver
                 break;
             case 10:
                 g.EngineType = DpiEngineType.Zapret;
+                // BOLT ⚡: Preserving OobPos, DisoobPos, and TlsrecPos when switching to Zapret, as it supports them.
                 g.DisorderPos = null;
                 g.FakePos = null;
-                g.OobPos = null;
-                g.DisoobPos = null;
-                g.TlsrecPos = null;
                 g.Md5sig = null;
                 g.FakeSni = null;
                 g.FakeData = null;
