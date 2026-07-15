@@ -44,6 +44,15 @@ public sealed partial class AiStrategyRowVm : ObservableObject
         EngineType = g.EngineType.ToString();
         OriginTag = g.Origin == StrategyOrigin.Evolved ? "эволюция" : "встроенная";
         CanDelete = g.Origin == StrategyOrigin.Evolved;
+        Update(g, successes, trials, wilsonLower);
+    }
+
+    /// <summary>
+    /// BOLT ⚡: Updates the view model properties from the genome and stats.
+    /// Used for incremental UI updates to avoid list recreation.
+    /// </summary>
+    public void Update(StrategyGenome g, int successes, int trials, double wilsonLower)
+    {
         ApplyWilson(successes, trials, wilsonLower);
         ApplyVerification(g);
         _suppress = true;
@@ -139,7 +148,7 @@ public partial class MainViewModel
                 if (e.Message.Contains("Сканирование завершено", StringComparison.OrdinalIgnoreCase))
                 {
                     SortProfileScores();
-                    SaveSettings();
+                    SaveSettingsDebounced();
                 }
 
                 if (e.IsSwitched && e.NewProfile is not null)
@@ -194,10 +203,10 @@ public partial class MainViewModel
         if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
             return;
 
-        void SwitchOnUi()
+        async Task SwitchOnUi()
         {
             _suppressOrchestratorStop = true;
-            Stop();
+            await Stop();
             _suppressOrchestratorStop = false;
 
             if (profile is not null)
@@ -209,23 +218,23 @@ public partial class MainViewModel
         }
 
         if (dispatcher.CheckAccess())
-            SwitchOnUi();
+            await SwitchOnUi();
         else
-            await dispatcher.InvokeAsync(SwitchOnUi).Task.ConfigureAwait(false);
+            await dispatcher.InvokeAsync(SwitchOnUi).Task.Unwrap().ConfigureAwait(false);
 
         // Даём время на завершение WinDivert и winws.exe
         await Task.Delay(1500).ConfigureAwait(false);
 
-        void StartOnUi()
+        async Task StartOnUi()
         {
             if (profile is not null)
-                Start();
+                await Start();
         }
 
         if (dispatcher.CheckAccess())
-            StartOnUi();
+            await StartOnUi();
         else
-            await dispatcher.InvokeAsync(StartOnUi).Task.ConfigureAwait(false);
+            await dispatcher.InvokeAsync(StartOnUi).Task.Unwrap().ConfigureAwait(false);
     }
 
     private Task UpdateProfileScoreAsync(string fileName, int score)
@@ -271,85 +280,91 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Rebuilds or updates the AI strategy list.
-    /// BOLT ⚡: Uses incremental updates to prevent UI flickering and reduce GC pressure.
+    /// BOLT ⚡: Optimized incremental UI update for the strategy list.
+    /// Uses pre-aggregated snapshots and performs a diff-based update to avoid list flickering.
     /// </summary>
     public void RebuildAiStrategyRows()
     {
         try
         {
-            var list = _aiRegistry.GetGenomes().ToList();
+            var genomes = _aiRegistry.GetGenomes().ToList();
             var fp = _aiFingerprints.Capture();
+            var networkHash = fp.Hash;
 
-            // Bulk data retrieval for better performance
-            var globalStats = _aiRegistry.GetAggregatedStatsSnapshot();
-            var networkStats = _aiRegistry.GetBanditSnapshot(fp.Hash);
-            var paretoSet = new HashSet<Guid>(_aiBandit.ParetoFront(list, fp.Hash).Select(g => g.Id));
-
-            var sortedGenomes = list
+            var sortedGenomes = genomes
                 .OrderByDescending(x => x.Origin == StrategyOrigin.Evolved)
                 .ThenByDescending(x => x.Generation)
                 .ThenBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            var currentRows = AiStrategyRows.ToDictionary(r => r.Id);
-            var newRowsList = new List<AiStrategyRowVm>();
+            var paretoSet = new HashSet<Guid>(_aiBandit.ParetoFront(genomes, networkHash).Select(g => g.Id));
+            var localBandits = _aiRegistry.GetBanditSnapshot(networkHash);
+            var aggregatedStats = _aiRegistry.GetAggregatedStatsSnapshot();
+
+            var existingRows = AiStrategyRows.ToDictionary(r => r.Id);
+            var newRows = new List<AiStrategyRowVm>();
 
             foreach (var g in sortedGenomes)
             {
-                globalStats.TryGetValue(g.Id, out var gs);
-                var (alpha, beta) = gs;
+                var (alpha, beta) = aggregatedStats.TryGetValue(g.Id, out var stats) ? stats : (1.0, 1.0);
                 var succ = (int)alpha - 1;
                 var trials = (int)(alpha + beta) - 2;
                 var w = WilsonScore.LowerBound(succ, trials);
 
-                var isPareto = paretoSet.Contains(g.Id);
+                if (existingRows.TryGetValue(g.Id, out var row))
+                {
+                    row.Update(g, succ, trials, w);
+                    newRows.Add(row);
+                }
+                else
+                {
+                    newRows.Add(new AiStrategyRowVm(_aiRegistry, g, succ, trials, w));
+                }
 
-                string lStats, lLatency;
-                if (networkStats.TryGetValue(g.Id, out var bandit) && (bandit.Alpha + bandit.Beta - 2) > 0)
+                var targetRow = newRows[^1];
+                targetRow.IsPareto = paretoSet.Contains(g.Id);
+
+                if (localBandits.TryGetValue(g.Id, out var bandit))
                 {
                     var lSucc = (int)bandit.Alpha - 1;
                     var lTrials = (int)(bandit.Alpha + bandit.Beta) - 2;
-                    lStats = $"L: {(lSucc * 100.0 / lTrials):0}% ({lTrials})";
-                    lLatency = $"{bandit.AvgLatency:0} ms";
-                }
-                else
-                {
-                    lStats = "L: —";
-                    lLatency = "—";
-                }
-
-                if (currentRows.TryGetValue(g.Id, out var existing))
-                {
-                    existing.Update(g, succ, trials, w, isPareto, lStats, lLatency);
-                    newRowsList.Add(existing);
-                }
-                else
-                {
-                    var row = new AiStrategyRowVm(_aiRegistry, g, succ, trials, w)
+                    if (lTrials > 0)
                     {
-                        IsPareto = isPareto,
-                        LocalStats = lStats,
-                        AvgLatencyText = lLatency
-                    };
-                    newRowsList.Add(row);
+                        targetRow.LocalStats = $"L: {(lSucc * 100.0 / lTrials):0}% ({lTrials})";
+                        targetRow.AvgLatencyText = $"{bandit.AvgLatency:0} ms";
+                    }
+                    else
+                    {
+                        targetRow.LocalStats = "L: —";
+                        targetRow.AvgLatencyText = "—";
+                    }
+                }
+                else
+                {
+                    targetRow.LocalStats = "L: —";
+                    targetRow.AvgLatencyText = "—";
                 }
             }
 
-            // Sync collection
-            if (!AiStrategyRows.SequenceEqual(newRowsList))
+            // Perform incremental update of the ObservableCollection
+            for (int i = 0; i < newRows.Count; i++)
             {
-                AiStrategyRows.Clear();
-                foreach (var r in newRowsList) AiStrategyRows.Add(r);
+                if (i >= AiStrategyRows.Count)
+                {
+                    AiStrategyRows.Add(newRows[i]);
+                }
+                else if (AiStrategyRows[i].Id != newRows[i].Id)
+                {
+                    AiStrategyRows[i] = newRows[i];
+                }
             }
 
-            OnPropertyChanged(nameof(AiStrategyRowCount));
-        }
-        catch (Exception ex)
-        {
-            Logs.Add($"[ИИ] Ошибка обновления списка: {ex.Message}");
-        }
-    }
+            while (AiStrategyRows.Count > newRows.Count)
+            {
+                AiStrategyRows.RemoveAt(AiStrategyRows.Count - 1);
+            }
+
+                var isPareto = paretoSet.Contains(g.Id);
 
     private Task EnsureProtectionRunningAsync()
     {
@@ -357,19 +372,18 @@ public partial class MainViewModel
         if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
             return Task.CompletedTask;
 
-        void EnsureOnUi()
+        async Task EnsureOnUi()
         {
             if (SelectedProfile is not null && !IsTrackedProcessRunning())
-                Start();
+                await Start();
         }
 
         if (dispatcher.CheckAccess())
         {
-            EnsureOnUi();
-            return Task.CompletedTask;
+            return EnsureOnUi();
         }
 
-        return dispatcher.InvokeAsync(EnsureOnUi).Task;
+        return dispatcher.InvokeAsync(EnsureOnUi).Task.Unwrap();
     }
 
 
@@ -415,7 +429,7 @@ public partial class MainViewModel
         if (wasActive)
         {
             if (IsRunning)
-                Stop();
+                _ = Stop();
             SelectedProfile = Profiles.FirstOrDefault();
         }
 
@@ -505,7 +519,7 @@ public partial class MainViewModel
             await _orchestrator.ScanAllProfilesAsync();
             SortProfileScores();
             ScanProgressText = "Сканирование завершено";
-            SaveSettings();
+            SaveSettingsDebounced();
 
             var top = ProfileScores.FirstOrDefault(s => s.Score > 0);
             if (top is not null)
@@ -601,9 +615,11 @@ public partial class MainViewModel
             {
                 Logs.Add("[Оркестратор] Переход в ручной режим — перезапуск Zapret...");
                 _suppressOrchestratorStop = true;
-                Stop();
-                _suppressOrchestratorStop = false;
-                Start();
+                _ = Stop().ContinueWith(_ =>
+                {
+                    _suppressOrchestratorStop = false;
+                    return Start();
+                }, TaskScheduler.FromCurrentSynchronizationContext());
             }
         }
     }

@@ -112,7 +112,7 @@ public sealed class AiHistoryStore
     /// <summary>
     /// Generates a CSV string from the AI history.
     /// BOLT ⚡: Uses InvariantCulture for numbers to prevent CSV corruption in locales where comma is a decimal separator.
-    /// BOLT ⚡: Supports optional pre-calculated displayNameMap for significantly faster export of large histories.
+    /// BOLT ⚡: Optimized to accept a pre-calculated display name map to avoid thousands of lock acquisitions.
     /// </summary>
     public string GetHistoryCsv(Func<Guid, string> getDisplayName, Dictionary<Guid, string>? displayNameMap = null)
     {
@@ -123,8 +123,8 @@ public sealed class AiHistoryStore
         foreach (var o in all)
         {
             string strategy;
-            if (displayNameMap != null && displayNameMap.TryGetValue(o.GenomeId, out var mappedName))
-                strategy = mappedName;
+            if (displayNameMap != null && displayNameMap.TryGetValue(o.GenomeId, out var dn))
+                strategy = dn;
             else
                 strategy = getDisplayName(o.GenomeId);
 
