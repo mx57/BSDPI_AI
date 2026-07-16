@@ -66,7 +66,7 @@ public static class ProfileBatLauncher
                 if (exeIndex < 0)
                     continue;
 
-                var executablePath = tokens[exeIndex].Value;
+                var executablePath = tokens[exeIndex].Value.Replace('\\', Path.DirectorySeparatorChar);
                 if (!Path.IsPathRooted(executablePath))
                     executablePath = Path.GetFullPath(Path.Combine(engineDir, executablePath));
 
