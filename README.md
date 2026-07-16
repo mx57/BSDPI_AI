@@ -409,7 +409,7 @@ dotnet publish BSDPI_AI/BSDPI_AI.csproj -c Release -r win-x64 --self-contained t
 
 ## Благодарности
 
-- **[klondike0x/BSDPI](https://github.com/klondike0x/BSDPI)** — базовая архитектура
+- **[klondike0x/fluxroute](https://github.com/klondike0x/BSDPI)** — базовая архитектура
 - **[bol-van/zapret](https://github.com/bol-van/zapret)** — ядро для обхода DPI
 - **[Flowseal](https://github.com/Flowseal)** — BAT-профили, TG Proxy, авто-обновления
 - **[hiddify/warp-plus](https://github.com/hiddify/warp-plus)** — CLI реализация Warp
