@@ -694,7 +694,7 @@ public partial class MainViewModel : ObservableObject
         AiExplorationPermil = settings.Ai.ExplorationRatePermil;
         AiAutoDeleteBelowScore = settings.Ai.AutoDeleteBelowScore;
         EngineMode = settings.Ai.EngineMode;
-        UseHybridMode = settings.Ai.EngineMode == 2;
+        UseHybridMode = settings.Ai.EngineMode == (int)DpiEngineMode.Hybrid;
         ByeDpiSocksPort = settings.Ai.ByeDpiSocksPort;
 
         var bd = settings.Ai.ByeDpiDefaults ?? new ByeDpiProfileSettings();

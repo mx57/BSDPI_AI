@@ -48,6 +48,7 @@ public partial class MainViewModel
             _ => DpiRunMode.Standalone
         };
         _engineManager.SetRunMode(runMode);
+        UseHybridMode = value == (int)DpiEngineMode.Hybrid;
     }
 
     [ObservableProperty] private int byeDpiSocksPort = 1080;
