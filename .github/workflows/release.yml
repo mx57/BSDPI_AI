@@ -96,6 +96,5 @@ jobs:
             gh release create $tag $zip `
               --title "$tag" `
               --generate-notes `
-              --target "${{ github.ref_name }}" `
               --repo "$env:GITHUB_REPOSITORY"
           }
