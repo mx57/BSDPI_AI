@@ -73,6 +73,16 @@ jobs:
             Write-Warning "engine/ not found in repo — portable release will lack winws.exe"
           }
 
+          # tg-proxy/ (Python embeddable + tg-ws-proxy исходники + cryptography/aiohttp)
+          # уже собран в репозитории, чтобы пользователю не требовалось ничего качать
+          # при первом запуске TG WS Proxy.
+          if (Test-Path .\tg-proxy) {
+            Copy-Item -Recurse -Force .\tg-proxy .\publish\tg-proxy
+            Write-Host "TG WS Proxy bundled into publish/tg-proxy"
+          } else {
+            Write-Warning "tg-proxy/ not found in repo — TG proxy will require download on first run"
+          }
+
       - name: Create ZIP
         shell: pwsh
         run: |

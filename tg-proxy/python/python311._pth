@@ -1,0 +1,5 @@
+.
+python311.zip
+.\tg-proxy\python\Lib\site-packages
+.\tg-proxy
+import site
