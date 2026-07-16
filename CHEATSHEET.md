@@ -1,4 +1,4 @@
-# FluxRoute AI — Шпаргалка
+# BSDPI AI — Шпаргалка
 
 ## Статус улучшений (обновлено: 2026-06-17)
 - ✅ Приоритет 1 (Надёжность): 5/5 задач выполнено
@@ -18,15 +18,15 @@
 ## Архитектура проекта
 
 ```
-FluxRoute.slnx
-├── FluxRoute.AI/          — ИИ-подсистема (Thompson Sampling + генетическая эволюция)
-├── FluxRoute.Core/        — Ядро: движки DPI, проверка связности, оркестратор, ChainBuilder
-├── FluxRoute/             — WPF GUI (MVVM: ViewModels + Views + Controls)
-├── FluxRoute.Updater/     — Автообновление engine/
-└── FluxRoute.Core.Tests/  — Юнит-тесты (53 теста)
+BSDPI.slnx
+├── BSDPI.AI/          — ИИ-подсистема (Thompson Sampling + генетическая эволюция)
+├── BSDPI.Core/        — Ядро: движки DPI, проверка связности, оркестратор, ChainBuilder
+├── BSDPI/             — WPF GUI (MVVM: ViewModels + Views + Controls)
+├── BSDPI.Updater/     — Автообновление engine/
+└── BSDPI.Core.Tests/  — Юнит-тесты (53 теста)
 ```
 
-## Ключевые компоненты ИИ (FluxRoute.AI)
+## Ключевые компоненты ИИ (BSDPI.AI)
 
 | Файл | Назначение |
 |------|------------|
@@ -48,7 +48,7 @@ FluxRoute.slnx
 | `Models/GenomeSignature.cs` | SHA256-подпись генома |
 | `Math/WilsonScore.cs` | Нижняя граница Wilson для ранжирования |
 
-## Ключевые компоненты ядра (FluxRoute.Core)
+## Ключевые компоненты ядра (BSDPI.Core)
 
 | Файл | Назначение |
 |------|------------|
@@ -66,7 +66,7 @@ FluxRoute.slnx
 | `Models/EngineProfile.cs` | Профиль движка (параметры запуска) |
 | `Models/ChainBuilder/` | Модели цепочек: ChainDefinition, ChainNode, ChainConnection, ChainNodeType |
 
-## WPF GUI (FluxRoute/)
+## WPF GUI (BSDPI/)
 
 | Файл | Назначение |
 |------|------------|
@@ -122,10 +122,10 @@ FluxRoute.slnx
 | `LICENSE` | Полный текст GPL v3 |
 | `NOTICE` | Атрибуция upstream и сторонних компонентов |
 | `Directory.Build.props` | Централизованные метаданные лицензии |
-| `FluxRoute.Updater/Services/AppUpdaterService.cs` | Должен указывать на `mx57/FluxRoute_AI`, НЕ на upstream |
+| `BSDPI.Updater/Services/AppUpdaterService.cs` | Должен указывать на `mx57/BSDPI_AI`, НЕ на upstream |
 | `README.md` / `README.en.md` | Отказ от ответственности (educational/research purpose) |
 
-**⚠️ При fork:** AppUpdaterService.cs содержит URLs на релизы. Если форкать — заменить `klondike0x/FluxRoute` на свой repo.
+**⚠️ При fork:** AppUpdaterService.cs содержит URLs на релизы. Если форкать — заменить `klondike0x/BSDPI` на свой repo.
 
 ## Как работает ИИ-цикл
 
@@ -223,15 +223,15 @@ FluxRoute.slnx
 ## Сборка и тесты
 
 ```bash
-dotnet restore FluxRoute.slnx
-dotnet build FluxRoute.slnx
-dotnet test FluxRoute.slnx
-dotnet run --project FluxRoute
+dotnet restore BSDPI.slnx
+dotnet build BSDPI.slnx
+dotnet test BSDPI.slnx
+dotnet run --project BSDPI
 ```
 
 ### Публикация релиза
 ```bash
-dotnet publish FluxRoute/FluxRoute.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish
+dotnet publish BSDPI/BSDPI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish
 ```
 
 ### Типовые конфликты типов

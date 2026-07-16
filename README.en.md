@@ -40,11 +40,11 @@ DPI filters from ISPs evolve constantly. What worked yesterday gets blocked toda
 
 > ### Important: About the Origin of the AI Component
 >
-> **BSDPI_AI is a fork of [klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute) and is the parent of all AI features** that are now present in the original project — Thompson Sampling, Genetic Evolution, Network Fingerprinting, Wilson Score, Fast Start, and others.
+> **BSDPI_AI is a fork of [klondike0x/BSDPI](https://github.com/klondike0x/BSDPI) and is the parent of all AI features** that are now present in the original project — Thompson Sampling, Genetic Evolution, Network Fingerprinting, Wilson Score, Fast Start, and others.
 >
-> These features were developed and implemented in this repository, then incorporated into the original FluxRoute. **The original author did not credit this fact** in his repository and did not list BSDPI_AI in the acknowledgments section.
+> These features were developed and implemented in this repository, then incorporated into the original BSDPI. **The original author did not credit this fact** in his repository and did not list BSDPI_AI in the acknowledgments section.
 >
-> Furthermore, the original FluxRoute author publicly states that forks "may be malicious" and "recommends against running them." **This claim is unfounded:**
+> Furthermore, the original BSDPI author publicly states that forks "may be malicious" and "recommends against running them." **This claim is unfounded:**
 >
 > - The project is **fully open-source** (GPLv3) — all code is available for inspection
 > - There is **no malicious code** in the repository — anyone can audit it
@@ -298,7 +298,7 @@ This project uses the **WinDivert** driver for packet modification.
 
 ## Acknowledgments
 
-- **[klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)** — base architecture
+- **[klondike0x/BSDPI](https://github.com/klondike0x/BSDPI)** — base architecture
 - **[bol-van/zapret](https://github.com/bol-van/zapret)** — DPI bypass core
 - **[Flowseal](https://github.com/Flowseal)** — BAT profiles, TG Proxy, auto-updates
 - **[hiddify/warp-plus](https://github.com/hiddify/warp-plus)** — Warp CLI implementation

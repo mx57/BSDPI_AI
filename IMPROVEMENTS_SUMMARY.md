@@ -1,4 +1,4 @@
-# FluxRoute AI — Сводка улучшений
+# BSDPI AI — Сводка улучшений
 
 ## Дата: 2026-06-17
 
@@ -21,25 +21,25 @@
 
 ### 2. Воссоздание UI компонентов Конструктора ✅
 
-**FluxRoute/Controls/NodeCanvas.cs:**
+**BSDPI/Controls/NodeCanvas.cs:**
 - Custom Canvas с RenderTransform (ScaleTransform + TranslateTransform)
 - Drag-and-drop нод через `MouseLeftButtonDown/Move/Up`
 - Zoom колесом мыши (0.2x – 3.0x)
 - Pan: Middle button / Alt+Left / Left на пустом canvas
 - Визуальный выбор нод (синяя рамка #58A6FF)
 
-**FluxRoute/Controls/NodeControl.cs:**
+**BSDPI/Controls/NodeControl.cs:**
 - UserControl с программным визуальным деревом
 - Border с цветом по типу ноды (NodeAppearance)
 - Иконка + Title + Subtitle
 - Drag-and-drop: обновляет `ChainNode.X/Y`
 
-**FluxRoute/Controls/ConnectionLine.cs:**
+**BSDPI/Controls/ConnectionLine.cs:**
 - Shape с BezierSegment
 - DependencyProperties: Start, End, LineBrush
 - Кривая: `dx = max(|End.X - Start.X| * 0.5, 30)`
 
-**FluxRoute/ViewModels/ChainBuilderViewModel.cs:**
+**BSDPI/ViewModels/ChainBuilderViewModel.cs:**
 - `ObservableCollection` для Nodes, Connections, ChainList
 - CRUD: NewChain, LoadChain, AddNode, DeleteSelectedNode, DeleteChain
 - Автосохранение через `ChainStore.Save()`
@@ -51,23 +51,23 @@
 
 **AppUpdaterService.cs:**
 ```diff
-- "https://github.com/klondike0x/FluxRoute/releases.atom"
-+ "https://github.com/mx57/FluxRoute_AI/releases.atom"
+- "https://github.com/klondike0x/BSDPI/releases.atom"
++ "https://github.com/mx57/BSDPI_AI/releases.atom"
 
-- "https://github.com/klondike0x/FluxRoute/releases/download/{0}/FluxRoute-{0}-portable.zip"
-+ "https://github.com/mx57/FluxRoute_AI/releases/download/{0}/FluxRoute_AI-{0}-portable.zip"
+- "https://github.com/klondike0x/BSDPI/releases/download/{0}/BSDPI-{0}-portable.zip"
++ "https://github.com/mx57/BSDPI_AI/releases/download/{0}/BSDPI_AI-{0}-portable.zip"
 ```
 
 **Directory.Build.props (новый):**
 ```xml
 <Authors>mx57</Authors>
-<Copyright>Copyright (C) 2026 mx57. Based on klondike0x/FluxRoute (GPLv3).</Copyright>
+<Copyright>Copyright (C) 2026 mx57. Based on klondike0x/BSDPI (GPLv3).</Copyright>
 <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
-<RepositoryUrl>https://github.com/mx57/FluxRoute_AI</RepositoryUrl>
+<RepositoryUrl>https://github.com/mx57/BSDPI_AI</RepositoryUrl>
 ```
 
 **NOTICE (новый):**
-- Атрибуция: klondike0x/FluxRoute, bol-van/zapret, Flowseal, basil00/WinDivert
+- Атрибуция: klondike0x/BSDPI, bol-van/zapret, Flowseal, basil00/WinDivert
 - Лицензии NuGet пакетов: MIT, Apache 2.0 (все GPL-совместимые)
 
 ---
@@ -77,11 +77,11 @@
 Добавлен в оба README:
 
 **README.md (RU):**
-> **FluxRoute AI** является образовательным и исследовательским программным обеспечением, предназначенным для изучения сетевых технологий...
+> **BSDPI AI** является образовательным и исследовательским программным обеспечением, предназначенным для изучения сетевых технологий...
 > Данное ПО **не является** инструментом для нарушения действующего законодательства...
 
 **README.en.md (EN):**
-> **FluxRoute AI** is educational and research software designed for studying network technologies...
+> **BSDPI AI** is educational and research software designed for studying network technologies...
 > This software **is not** a tool for violating applicable laws...
 
 ---
@@ -149,7 +149,7 @@
 
 ### Сборка
 ```bash
-dotnet build FluxRoute.slnx
-dotnet test FluxRoute.slnx
-dotnet publish FluxRoute/FluxRoute.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish
+dotnet build BSDPI.slnx
+dotnet test BSDPI.slnx
+dotnet publish BSDPI/BSDPI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish
 ```
