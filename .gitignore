@@ -3,8 +3,8 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-# Flowseal engine (скачивается автоматически при первом запуске)
-BSDPI/engine/
+# Flowseal engine (committed at repo root ./engine for portable release)
+# engine/ root is tracked; only build/obj inside it must stay ignored.
 
 # User-specific files
 *.rsuser
@@ -31,6 +31,9 @@ x86/
 [Aa][Rr][Mm]64/
 bld/
 [Bb]in/
+# Exception: keep the bundled Flowseal engine binaries (winws.exe, WinDivert, cygwin1.dll, .bin lists)
+!engine/bin/
+!engine/bin/**
 [Oo]bj/
 [Oo]ut/
 [Ll]og/
