@@ -27,6 +27,24 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // BOLT ⚡: глобальные перехватчики — раньше любое исключение в фоновом
+        // потоке/UI крашило процесс молча. Теперь логируем и (где можно) переживаем.
+        DispatcherUnhandledException += (_, ea) =>
+        {
+            Log.Fatal(ea.Exception, "Unhandled Dispatcher exception.");
+            ea.Handled = true;
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, ea) =>
+        {
+            if (ea.ExceptionObject is Exception ex)
+                Log.Fatal(ex, "Unhandled AppDomain exception.");
+        };
+        TaskScheduler.UnobservedTaskException += (_, ea) =>
+        {
+            Log.Error(ea.Exception, "Unobserved task exception.");
+            ea.SetObserved();
+        };
+
         Log.Logger = ConfigureSerilog(new LoggerConfiguration()).CreateLogger();
 
         try

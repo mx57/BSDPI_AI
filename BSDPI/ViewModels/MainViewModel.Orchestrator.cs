@@ -123,11 +123,33 @@ public partial class MainViewModel
 {
     private const int MaxLogEntries = 50;
 
+    // BOLT ⚡: мутации ObservableCollection, привязанных к UI, ДОЛЖНЫ идти в UI-поток.
+    // Эти методы вызываются из фоновых задач оркестратора / ИИ-эволюции, поэтому
+    // маршаллим через Dispatcher. Без этого — NotSupportedException и краш процесса.
     private void AddOrchestratorLog(string message)
     {
+        var d = Application.Current?.Dispatcher;
+        if (d is not null && !d.CheckAccess())
+        {
+            _ = d.BeginInvoke(new Action(() => AddOrchestratorLog(message)));
+            return;
+        }
+
         OrchestratorLogs.Add(message);
         while (OrchestratorLogs.Count > MaxLogEntries)
             OrchestratorLogs.RemoveAt(0);
+    }
+
+    private void AddLog(string message)
+    {
+        var d = Application.Current?.Dispatcher;
+        if (d is not null && !d.CheckAccess())
+        {
+            _ = d.BeginInvoke(new Action(() => AddLog(message)));
+            return;
+        }
+
+        Logs.Add(message);
     }
 
     private void OnOrchestratorStatus(object? sender, OrchestratorEventArgs e)
@@ -226,7 +248,7 @@ public partial class MainViewModel
                     }).Task.ConfigureAwait(false);
                 }
 
-                Logs.Add($"[Оркестратор] Лучший профиль «{profile.DisplayName}» выбран (применится при следующем запуске).");
+                AddLog($"[Оркестратор] Лучший профиль «{profile.DisplayName}» выбран (применится при следующем запуске).");
             }
 
             return;
@@ -434,7 +456,7 @@ public partial class MainViewModel
 
         if (g.Origin != StrategyOrigin.Evolved)
         {
-            Logs.Add("[ИИ] Встроенные стратегии из engine/ нельзя удалить, снимите галочку.");
+            AddLog("[ИИ] Встроенные стратегии из engine/ нельзя удалить, снимите галочку.");
             return;
         }
 
@@ -467,7 +489,7 @@ public partial class MainViewModel
 
         RebuildAiStrategyRows();
         RefreshAiDashboard();
-        Logs.Add($"[ИИ] Удалена стратегия «{g.DisplayName}».");
+        AddLog($"[ИИ] Удалена стратегия «{g.DisplayName}».");
     }
 
     private static void TryDeleteGenomeBatFile(StrategyGenome g)
@@ -560,7 +582,7 @@ public partial class MainViewModel
                 if (profile is not null)
                 {
                     AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ▶ Запуск лучшего профиля «{profile.DisplayName}» ({(int)System.Math.Round((double)top.Score * 100)}%).");
-                    Logs.Add($"[Оркестратор] Лучший профиль после сканирования: «{profile.DisplayName}».");
+                    AddLog($"[Оркестратор] Лучший профиль после сканирования: «{profile.DisplayName}».");
                     await SwitchProfileAsync(profile).ConfigureAwait(false);
                 }
             }
@@ -571,7 +593,7 @@ public partial class MainViewModel
         {
             ScanProgressText = "Ошибка сканирования";
             AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка сканирования: {ex.Message}");
-            Logs.Add($"[Оркестратор] Ошибка сканирования: {ex.Message}");
+            AddLog($"[Оркестратор] Ошибка сканирования: {ex.Message}");
         }
         finally
         {
@@ -607,7 +629,7 @@ public partial class MainViewModel
 
             OrchestratorRunning = true;
             StartProcessMonitor();
-            Logs.Add("[Оркестратор] Запущен в автоматическом режиме.");
+            AddLog("[Оркестратор] Запущен в автоматическом режиме.");
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
@@ -621,7 +643,7 @@ public partial class MainViewModel
         _aiOrchestrator.Stop();
         OrchestratorRunning = false;
         StopProcessMonitor();
-        Logs.Add("[Оркестратор] Остановлен.");
+        AddLog("[Оркестратор] Остановлен.");
     }
 
     // ── Применяем состояние OrchestratorEnabled ──
@@ -634,7 +656,7 @@ public partial class MainViewModel
             if (IsRunning)
                 StartOrchestratorServices();
             else
-                Logs.Add("[Оркестратор] Режим авто: ожидаю запуск Zapret...");
+                AddLog("[Оркестратор] Режим авто: ожидаю запуск Zapret...");
         }
         else
         {
@@ -645,7 +667,7 @@ public partial class MainViewModel
 
             if (wasRunning)
             {
-                Logs.Add("[Оркестратор] Переход в ручной режим — перезапуск Zapret...");
+                AddLog("[Оркестратор] Переход в ручной режим — перезапуск Zapret...");
                 _suppressOrchestratorStop = true;
                 _ = Stop().ContinueWith(_ =>
                 {
@@ -696,7 +718,7 @@ public partial class MainViewModel
         catch (Exception ex)
         {
             AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка проверки: {ex.Message}");
-            Logs.Add($"[Оркестратор] Ошибка проверки: {ex.Message}");
+            AddLog($"[Оркестратор] Ошибка проверки: {ex.Message}");
         }
     }
 

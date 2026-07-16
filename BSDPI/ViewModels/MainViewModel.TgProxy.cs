@@ -815,6 +815,13 @@ public partial class MainViewModel
 
     private void AddTgProxyLog(string msg)
     {
+        var d = Application.Current?.Dispatcher;
+        if (d is not null && !d.CheckAccess())
+        {
+            _ = d.BeginInvoke(new Action(() => AddTgProxyLog(msg)));
+            return;
+        }
+
         TgProxyLogs.Add(msg);
         while (TgProxyLogs.Count > 500)
             TgProxyLogs.RemoveAt(0);
