@@ -208,7 +208,16 @@ public static class ProfileBatLauncher
         };
 
         using var p = Process.Start(psi);
-        p?.WaitForExit(10000);
+        if (p is not null && !p.WaitForExit(10000))
+        {
+            try
+            {
+                p.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+            }
+        }
     }
 
     /// <summary>

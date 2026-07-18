@@ -123,17 +123,24 @@ public sealed class ZapretEngine : IDpiEngine
         }
     }
 
-    public Task<bool> StopAsync(CancellationToken ct = default)
+    public async Task<bool> StopAsync(CancellationToken ct = default)
     {
+        Process? processToKill;
         lock (_gate)
         {
-            TryKillProcess(_process);
+            processToKill = _process;
             _process = null;
             Status = EngineStatus.Stopped;
             ProcessInfo = null;
         }
+
+        if (processToKill is not null)
+        {
+            await TryKillProcessAsync(processToKill, ct).ConfigureAwait(false);
+        }
+
         NotifyStatus();
-        return Task.FromResult(true);
+        return true;
     }
 
     public Task<EngineStatus> ProbeStatusAsync(CancellationToken ct = default)
@@ -259,14 +266,22 @@ public sealed class ZapretEngine : IDpiEngine
         StatusChanged?.Invoke(this, Status);
     }
 
-    private static void TryKillProcess(Process? process)
+    private static async Task TryKillProcessAsync(Process process, CancellationToken ct)
     {
-        if (process is null) return;
         try
         {
             if (!process.HasExited)
                 process.Kill(entireProcessTree: true);
-            process.WaitForExit(2000);
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(2));
+            try
+            {
+                await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
             process.Dispose();
         }
         catch
@@ -278,6 +293,24 @@ public sealed class ZapretEngine : IDpiEngine
     {
         if (_disposed) return;
         _disposed = true;
-        StopAsync().GetAwaiter().GetResult();
+
+        lock (_gate)
+        {
+            if (_process is not null)
+            {
+                try
+                {
+                    if (!_process.HasExited)
+                        _process.Kill(entireProcessTree: true);
+                    _process.Dispose();
+                }
+                catch
+                {
+                }
+                _process = null;
+            }
+            Status = EngineStatus.Stopped;
+            ProcessInfo = null;
+        }
     }
 }
