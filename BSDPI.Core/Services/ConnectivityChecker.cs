@@ -138,36 +138,43 @@ public sealed class ConnectivityChecker : IConnectivityChecker
             if (process is null)
                 return await HttpClientAsync(target, ct).ConfigureAwait(false);
 
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(timeoutCts.Token);
-            var stderrTask = process.StandardError.ReadToEndAsync(timeoutCts.Token);
-
-            await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
-
-            var stdout = await stdoutTask.ConfigureAwait(false);
-            var stderr = await stderrTask.ConfigureAwait(false);
-            sw.Stop();
-
-            var metrics = ParseCurlMetrics(stdout);
-            var status = metrics.StatusCode;
-            var elapsedMs = metrics.TotalSeconds is null
-                ? sw.ElapsedMilliseconds
-                : (long)Math.Round(metrics.TotalSeconds.Value * 1000);
-
-            var ok = process.ExitCode == 0 && status is >= 200 and < 500;
-            var detail = BuildCurlDetail(status, process.ExitCode, metrics.ErrorMessage, stderr);
-
-            return new CheckResult
+            try
             {
-                Key = target.Key,
-                Kind = target.Kind,
-                Value = value,
-                Ok = ok,
-                StatusCode = status,
-                ExitCode = process.ExitCode,
-                ElapsedMs = elapsedMs,
-                Detail = detail,
-                Checker = $"curl+socks5://{socksHost}:{socksPort}"
-            };
+                var stdoutTask = process.StandardOutput.ReadToEndAsync(timeoutCts.Token);
+                var stderrTask = process.StandardError.ReadToEndAsync(timeoutCts.Token);
+
+                await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
+
+                var stdout = await stdoutTask.ConfigureAwait(false);
+                var stderr = await stderrTask.ConfigureAwait(false);
+                sw.Stop();
+
+                var metrics = ParseCurlMetrics(stdout);
+                var status = metrics.StatusCode;
+                var elapsedMs = metrics.TotalSeconds is null
+                    ? sw.ElapsedMilliseconds
+                    : (long)Math.Round(metrics.TotalSeconds.Value * 1000);
+
+                var ok = process.ExitCode == 0 && status is >= 200 and < 500;
+                var detail = BuildCurlDetail(status, process.ExitCode, metrics.ErrorMessage, stderr);
+
+                return new CheckResult
+                {
+                    Key = target.Key,
+                    Kind = target.Kind,
+                    Value = value,
+                    Ok = ok,
+                    StatusCode = status,
+                    ExitCode = process.ExitCode,
+                    ElapsedMs = elapsedMs,
+                    Detail = detail,
+                    Checker = $"curl+socks5://{socksHost}:{socksPort}"
+                };
+            }
+            finally
+            {
+                TryKill(process);
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -352,36 +359,43 @@ public sealed class ConnectivityChecker : IConnectivityChecker
             if (process is null)
                 return await HttpClientAsync(target, ct).ConfigureAwait(false);
 
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(timeoutCts.Token);
-            var stderrTask = process.StandardError.ReadToEndAsync(timeoutCts.Token);
-
-            await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
-
-            var stdout = await stdoutTask.ConfigureAwait(false);
-            var stderr = await stderrTask.ConfigureAwait(false);
-            sw.Stop();
-
-            var metrics = ParseCurlMetrics(stdout);
-            var status = metrics.StatusCode;
-            var elapsedMs = metrics.TotalSeconds is null
-                ? sw.ElapsedMilliseconds
-                : (long)Math.Round(metrics.TotalSeconds.Value * 1000);
-
-            var ok = process.ExitCode == 0 && status is >= 200 and < 500;
-            var detail = BuildCurlDetail(status, process.ExitCode, metrics.ErrorMessage, stderr);
-
-            return new CheckResult
+            try
             {
-                Key = target.Key,
-                Kind = target.Kind,
-                Value = value,
-                Ok = ok,
-                StatusCode = status,
-                ExitCode = process.ExitCode,
-                ElapsedMs = elapsedMs,
-                Detail = detail,
-                Checker = "curl.exe"
-            };
+                var stdoutTask = process.StandardOutput.ReadToEndAsync(timeoutCts.Token);
+                var stderrTask = process.StandardError.ReadToEndAsync(timeoutCts.Token);
+
+                await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
+
+                var stdout = await stdoutTask.ConfigureAwait(false);
+                var stderr = await stderrTask.ConfigureAwait(false);
+                sw.Stop();
+
+                var metrics = ParseCurlMetrics(stdout);
+                var status = metrics.StatusCode;
+                var elapsedMs = metrics.TotalSeconds is null
+                    ? sw.ElapsedMilliseconds
+                    : (long)Math.Round(metrics.TotalSeconds.Value * 1000);
+
+                var ok = process.ExitCode == 0 && status is >= 200 and < 500;
+                var detail = BuildCurlDetail(status, process.ExitCode, metrics.ErrorMessage, stderr);
+
+                return new CheckResult
+                {
+                    Key = target.Key,
+                    Kind = target.Kind,
+                    Value = value,
+                    Ok = ok,
+                    StatusCode = status,
+                    ExitCode = process.ExitCode,
+                    ElapsedMs = elapsedMs,
+                    Detail = detail,
+                    Checker = "curl.exe"
+                };
+            }
+            finally
+            {
+                TryKill(process);
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
