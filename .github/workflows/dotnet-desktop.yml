@@ -1,121 +1,137 @@
-name: Build and Release BSDPI AI
+name: Build Portable BSDPI AI
 
 on:
   push:
     tags:
-      - 'v*'  # Запуск при пуше тега вида v1.0.0, v1.5.1 и т.д.
-  workflow_dispatch:  # Возможность ручного запуска
+      - 'v*'            # Сборка портабл-релиза при пуше тега vX.Y.Z
+  workflow_dispatch:    # Ручной запуск из вкладки Actions
+    inputs:
+      version:
+        description: 'Версия релиза (без префикса v), напр. 1.7.7'
+        required: false
+        default: ''
 
 permissions:
-  contents: write  # Для создания релизов
+  contents: write      # Создание релиза и загрузка артефакта
 
 jobs:
-  build:
+  build-portable:
     runs-on: windows-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup .NET 10
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '10.0.x'
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
 
-    - name: Cache NuGet packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-        restore-keys: |
-          ${{ runner.os }}-nuget-
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
-    - name: Restore dependencies
-      run: dotnet restore
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          # Приоритет: явная версия из dispatch -> тег -> версия из csproj.
+          $ver = "${{ github.event.inputs.version }}".Trim()
+          if ([string]::IsNullOrEmpty($ver)) {
+            if ("${{ github.ref_type }}" -eq 'tag') {
+              $ver = "${{ github.ref_name }}" -replace '^v', ''
+            } else {
+              [xml]$csproj = Get-Content .\BSDPI\BSDPI.csproj
+              $ver = $csproj.Project.PropertyGroup.Version
+            }
+          }
+          $tag = "v$ver"
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+          echo "tag=$tag" >> $env:GITHUB_OUTPUT
+          Write-Host "Building portable release $tag"
 
-    - name: Run tests
-      run: dotnet test --configuration Release --verbosity normal
-      continue-on-error: true  # Не блокируем сборку, если тестов нет или они падают
+      - name: Restore solution
+        run: dotnet restore .\BSDPI_AI.slnx
 
-    - name: Get version from tag
-      id: get_version
-      shell: pwsh
-      run: |
-        $tag = "${{ github.ref_name }}"
-        $version = $tag -replace '^v', ''
-        echo "version=$version" >> $env:GITHUB_OUTPUT
-        echo "tag=$tag" >> $env:GITHUB_OUTPUT
+      - name: Run tests
+        run: dotnet test .\BSDPI_AI.slnx --configuration Release --no-restore --verbosity normal
+        continue-on-error: true   # Тесты не блокируют сборку портабл-артефакта
 
-    - name: Build application
-      run: dotnet publish BSDPI/BSDPI.csproj `
-        --configuration Release `
-        --runtime win-x64 `
-        --self-contained false `
-        --output ./publish `
-        /p:Version=${{ steps.get_version.outputs.version }} `
-        /p:AssemblyVersion=${{ steps.get_version.outputs.version }} `
-        /p:FileVersion=${{ steps.get_version.outputs.version }}
+      - name: Publish self-contained win-x64
+        run: dotnet publish .\BSDPI\BSDPI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\publish
 
-    - name: Create portable ZIP
-      shell: pwsh
-      run: |
-        $version = "${{ steps.get_version.outputs.version }}"
-        $zipName = "BSDPI_AI-v$version-portable.zip"
-        Compress-Archive -Path ./publish/* -DestinationPath ./$zipName
-        echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
-      id: create_zip
+      - name: Bundle Flowseal engine
+        shell: pwsh
+        run: |
+          # engine/ (winws.exe, WinDivert.dll, BAT-профили) не входит в сборку .NET,
+          # но необходим для работы zapret. Копируем из репозитория в publish,
+          # чтобы портабельный релиз был самодостаточным.
+          if (Test-Path .\engine) {
+            Copy-Item -Recurse -Force .\engine .\publish\engine
+            Write-Host "Engine bundled into publish/engine"
+          } else {
+            Write-Warning "engine/ not found in repo - portable release will lack winws.exe"
+          }
 
-    - name: Calculate SHA-256 hash
-      id: sha256
-      shell: pwsh
-      run: |
-        $zipName = "${{ steps.create_zip.outputs.zip_name }}"
-        $hash = (Get-FileHash -Path ./$zipName -Algorithm SHA256).Hash
-        echo "hash=$hash" >> $env:GITHUB_OUTPUT
-        echo "SHA-256: $hash"
+      - name: Bundle TG WS Proxy (if present)
+        shell: pwsh
+        run: |
+          if (Test-Path .\tg-proxy) {
+            Copy-Item -Recurse -Force .\tg-proxy .\publish\tg-proxy
+            Write-Host "TG WS Proxy bundled into publish/tg-proxy"
+          } else {
+            Write-Host "tg-proxy/ not found in repo - skipping (proxy will prompt for download on first use)"
+          }
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: ${{ steps.create_zip.outputs.zip_name }}
-        name: BSDPI AI ${{ steps.get_version.outputs.tag }}
-        body: |
-          ## BSDPI AI ${{ steps.get_version.outputs.tag }}
-          
-          ### Установка
-          1. Скачайте `${{ steps.create_zip.outputs.zip_name }}`
-          2. Распакуйте в любую папку (например, `C:\BSDPI_AI\`)
-          3. Запустите `BSDPI.exe` **от имени администратора**
-          
-          ### Проверка целостности
-          **SHA-256:** `${{ steps.sha256.outputs.hash }}`
-          
-          Проверить хеш можно командой:
-          ```powershell
-          Get-FileHash -Path BSDPI_AI-v${{ steps.get_version.outputs.version }}-portable.zip -Algorithm SHA256
-          ```
-          
-          ### Требования
-          - Windows 10/11 x64
-          - .NET 10 Desktop Runtime (если не self-contained)
-          - Права администратора
-          
-          ---
-          
-          **Оригинальный проект:** [klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)
-          
-          Этот релиз является форком FluxRoute Desktop с дополнительными AI-расширениями.
-        draft: false
-        prerelease: false
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create portable ZIP
+        id: create_zip
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.version }}"
+          $zipName = "BSDPI_AI-v$ver-portable.zip"
+          Compress-Archive -Path .\publish\* -DestinationPath ".\$zipName" -Force
+          echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
+          Write-Host "Created $zipName"
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: BSDPI_AI-${{ steps.get_version.outputs.version }}
-        path: ${{ steps.create_zip.outputs.zip_name }}
-        retention-days: 30
+      - name: Calculate SHA-256 hash
+        id: sha256
+        shell: pwsh
+        run: |
+          $zipName = "${{ steps.create_zip.outputs.zip_name }}"
+          $hash = (Get-FileHash -Path ".\$zipName" -Algorithm SHA256).Hash
+          echo "hash=$hash" >> $env:GITHUB_OUTPUT
+          Write-Host "SHA-256: $hash"
+
+      - name: Create or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $zip = "${{ steps.create_zip.outputs.zip_name }}"
+          $hash = "${{ steps.sha256.outputs.hash }}"
+
+          gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $zip --clobber --repo "$env:GITHUB_REPOSITORY"
+          } else {
+            gh release create $tag $zip `
+              --title "$tag" `
+              --notes "## BSDPI AI $tag`n`n**SHA-256:** \`$hash\`" `
+              --generate-notes `
+              --target "${{ github.ref_name }}" `
+              --repo "$env:GITHUB_REPOSITORY"
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BSDPI_AI-${{ steps.version.outputs.version }}
+          path: ${{ steps.create_zip.outputs.zip_name }}
+          retention-days: 30
