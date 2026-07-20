@@ -17,8 +17,21 @@ public sealed class NetworkChangeWatcher : IDisposable
     public NetworkChangeWatcher(NetworkFingerprintProvider fingerprints)
     {
         _fingerprints = fingerprints;
-        NetworkChange.NetworkAddressChanged += OnNetworkChange;
-        NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailability;
+
+        // Подписка на события NetworkChange может бросить NetworkInformationException
+        // в ограниченных средах (контейнеры, песочницы, некоторые ОС без прав на
+        // enum сетевых интерфейсов). Не должна ронять весь оркестратор — отслеживание
+        // смены сети просто отключается, базовая функциональность работает.
+        try
+        {
+            NetworkChange.NetworkAddressChanged += OnNetworkChange;
+            NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailability;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        {
+            System.Diagnostics.Trace.TraceWarning($"NetworkChangeWatcher: не удалось подписаться на события сети: {ex.Message}");
+        }
+
         _lastEmitted = _fingerprints.Capture();
     }
 

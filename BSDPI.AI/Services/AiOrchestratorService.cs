@@ -897,7 +897,7 @@ public sealed class AiOrchestratorService : IDisposable
         if (!Directory.Exists(engineDir))
             return;
 
-        var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "service.bat", "service,.bat" };
+        var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "service.bat" };
         var seenBuiltinIds = new HashSet<Guid>();
         bool anyChanged = false;
 

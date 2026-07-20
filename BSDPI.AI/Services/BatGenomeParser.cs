@@ -102,9 +102,16 @@ public static class BatGenomeParser
                         g.FakeTtl = ttl;
                     break;
                 case "--dpi-desync-autottl":
-                    g.AutoTtl = string.IsNullOrEmpty(val) || val is "1" or "true" or "yes";
-                    if (val is not null && int.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out var autottl))
+                    if (string.IsNullOrEmpty(val))
+                        g.AutoTtl = true;
+                    else if (val is "1" or "true" or "yes")
+                        g.AutoTtl = true;
+                    else if (val is "0" or "false" or "no")
+                        g.AutoTtl = false;
+                    else if (int.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out var autottl))
                         g.AutoTtl = autottl != 0;
+                    else
+                        g.AutoTtl = false;
                     break;
                 case "--dpi-desync-any-protocol":
                     g.DesyncAnyProtocol = val;
