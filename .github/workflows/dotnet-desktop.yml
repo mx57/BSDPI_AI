@@ -108,26 +108,22 @@ jobs:
           echo "hash=$hash" >> $env:GITHUB_OUTPUT
           Write-Host "SHA-256: $hash"
 
-      - name: Create or update GitHub Release
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $tag = "${{ steps.version.outputs.tag }}"
-          $zip = "${{ steps.create_zip.outputs.zip_name }}"
-          $hash = "${{ steps.sha256.outputs.hash }}"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: BSDPI AI ${{ steps.version.outputs.tag }}
+          files: ${{ steps.create_zip.outputs.zip_name }}
+          body: |
+            ## BSDPI AI ${{ steps.version.outputs.tag }}
 
-          gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
-          if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag $zip --clobber --repo "$env:GITHUB_REPOSITORY"
-          } else {
-            gh release create $tag $zip `
-              --title "$tag" `
-              --notes "## BSDPI AI $tag`n`n**SHA-256:** \`$hash\`" `
-              --generate-notes `
-              --target "${{ github.ref_name }}" `
-              --repo "$env:GITHUB_REPOSITORY"
-          }
+            **SHA-256:** `${{ steps.sha256.outputs.hash }}`
+
+            Портабельный self-contained релиз для Windows 10/11 x64.
+            Распакуйте `BSDPI_AI-v${{ steps.version.outputs.version }}-portable.zip` и запустите `BSDPI.exe` от имени администратора.
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
