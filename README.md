@@ -400,15 +400,15 @@ BSDPI_AI.slnx
 **Требования:** .NET 10 SDK, Windows 10/11 x64, права администратора
 
 ```bash
-dotnet restore BSDPI_AI.slnx
-dotnet build BSDPI_AI.slnx
+dotnet restore BSDPI.slnx
+dotnet build BSDPI.slnx
 dotnet run --project BSDPI
 ```
 
 ### 🧪 Тесты
 
 ```bash
-dotnet test BSDPI_AI.slnx
+dotnet test BSDPI.slnx
 ```
 
 ### 📦 Публикация релиза вручную

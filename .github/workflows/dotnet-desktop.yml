@@ -57,10 +57,10 @@ jobs:
           Write-Host "Building portable release $tag"
 
       - name: Restore solution
-        run: dotnet restore .\BSDPI_AI.slnx
+        run: dotnet restore .\BSDPI.slnx
 
       - name: Run tests
-        run: dotnet test .\BSDPI_AI.slnx --configuration Release --no-restore --verbosity normal
+        run: dotnet test .\BSDPI.slnx --configuration Release --no-restore --verbosity normal
         continue-on-error: true   # Тесты не блокируют сборку портабл-артефакта
 
       - name: Publish self-contained win-x64
