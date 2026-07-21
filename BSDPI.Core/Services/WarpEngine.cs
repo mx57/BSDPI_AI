@@ -14,6 +14,7 @@ public sealed class WarpEngine : IDpiEngine
     private readonly string _engineDir;
     private readonly object _gate = new();
     private bool _disposed;
+    private string? _activeConfigPath;
 
     public event EventHandler<EngineStatus>? StatusChanged;
     public event EventHandler<string>? MessageReceived;
@@ -49,8 +50,9 @@ public sealed class WarpEngine : IDpiEngine
             if (!string.IsNullOrWhiteSpace(profile.WarpConfig))
             {
                 var warpDir = Path.GetDirectoryName(executable) ?? _engineDir;
-                configPath = Path.Combine(warpDir, "warp.conf");
-                await File.WriteAllTextAsync(configPath, profile.WarpConfig, new System.Text.UTF8Encoding(false), ct).ConfigureAwait(false);
+                _activeConfigPath = Path.Combine(warpDir, "warp.conf");
+                await File.WriteAllTextAsync(_activeConfigPath, profile.WarpConfig, new System.Text.UTF8Encoding(false), ct).ConfigureAwait(false);
+                configPath = _activeConfigPath;
             }
 
             var args = BuildWarpArgs(profile, configPath);
@@ -99,6 +101,18 @@ public sealed class WarpEngine : IDpiEngine
                 {
                     Status = EngineStatus.Failed;
                 }
+                if (_activeConfigPath is not null)
+                {
+                    try
+                    {
+                        if (File.Exists(_activeConfigPath))
+                            File.Delete(_activeConfigPath);
+                    }
+                    catch
+                    {
+                    }
+                    _activeConfigPath = null;
+                }
                 NotifyStatus();
                 return false;
             }
@@ -123,6 +137,18 @@ public sealed class WarpEngine : IDpiEngine
             {
                 Status = EngineStatus.Failed;
             }
+            if (_activeConfigPath is not null)
+            {
+                try
+                {
+                    if (File.Exists(_activeConfigPath))
+                        File.Delete(_activeConfigPath);
+                }
+                catch
+                {
+                }
+                _activeConfigPath = null;
+            }
             NotifyStatus();
             return false;
         }
@@ -131,17 +157,32 @@ public sealed class WarpEngine : IDpiEngine
     public async Task<bool> StopAsync(CancellationToken ct = default)
     {
         Process? processToKill;
+        string? configToDelete = null;
         lock (_gate)
         {
             processToKill = _process;
             _process = null;
             Status = EngineStatus.Stopped;
             ProcessInfo = null;
+            configToDelete = _activeConfigPath;
+            _activeConfigPath = null;
         }
 
         if (processToKill is not null)
         {
             await TryKillProcessAsync(processToKill, ct).ConfigureAwait(false);
+        }
+
+        if (configToDelete is not null)
+        {
+            try
+            {
+                if (File.Exists(configToDelete))
+                    File.Delete(configToDelete);
+            }
+            catch
+            {
+            }
         }
 
         NotifyStatus();
@@ -261,6 +302,7 @@ public sealed class WarpEngine : IDpiEngine
         if (_disposed) return;
         _disposed = true;
 
+        string? configToDelete = null;
         lock (_gate)
         {
             if (_process is not null)
@@ -278,6 +320,20 @@ public sealed class WarpEngine : IDpiEngine
             }
             Status = EngineStatus.Stopped;
             ProcessInfo = null;
+            configToDelete = _activeConfigPath;
+            _activeConfigPath = null;
+        }
+
+        if (configToDelete is not null)
+        {
+            try
+            {
+                if (File.Exists(configToDelete))
+                    File.Delete(configToDelete);
+            }
+            catch
+            {
+            }
         }
     }
 }
