@@ -1,11 +1,15 @@
-BSDPI AI
-Copyright (C) 2026 mx57
+BSDPI AI — Project Notices
+
+Copyright (c) 2026 klondike0x — Original FluxRoute project (base architecture,
+DPI engines, WPF shell, updater, core services)
+Copyright (c) 2026 mx57 — AI subsystem (Thompson Sampling, genetic strategy
+evolution, Wilson Score, Network Fingerprinting, Fast Start, AI orchestration)
 
 This software is licensed under the GNU General Public License v3.0 (GPLv3).
 See LICENSE file for the full license text.
 
-This project is a fork of FluxRoute Desktop by klondike0x, with additional
-AI extensions (Thompson Sampling, genetic strategy evolution).
+This project is a fork of FluxRoute Desktop by klondike0x, with independent
+AI extensions developed by mx57. Both contributions are subject to GPLv3.
 
 Original project: https://github.com/klondike0x/FluxRoute
 Fork author: https://github.com/mx57
