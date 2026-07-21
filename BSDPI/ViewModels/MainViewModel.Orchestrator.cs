@@ -755,24 +755,41 @@ public partial class MainViewModel
             var dispatcher = Application.Current?.Dispatcher;
             if (dispatcher is null || dispatcher.HasShutdownStarted) break;
 
-            await dispatcher.InvokeAsync(() =>
+            try
             {
-                try { CheckProcessTriggers(); }
-                catch (Exception ex) { AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠ Ошибка мониторинга: {ex.Message}"); }
-            });
+                await CheckProcessTriggersAsync(dispatcher).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "Error checking process triggers");
+                _ = dispatcher.BeginInvoke(new Action(() =>
+                {
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠ Ошибка мониторинга: {ex.Message}");
+                }));
+            }
         }
     }
 
-    private void CheckProcessTriggers()
+    private async Task CheckProcessTriggersAsync(System.Windows.Threading.Dispatcher dispatcher)
     {
-        // Ищем первый пресет с триггером, чей процесс сейчас запущен
-        ConfigPreset? matched = null;
-        var triggeredPresets = Presets.Where(p => !string.IsNullOrWhiteSpace(p.TriggerProcess)).ToList();
+        // 1. Get a thread-safe snapshot of trigger processes from Presets under dispatcher
+        var triggeredPresets = await dispatcher.InvokeAsync(() => Presets
+            .Where(p => !string.IsNullOrWhiteSpace(p.TriggerProcess))
+            .Select(p => new { p.Id, p.Name, p.TriggerProcess })
+            .ToList()).Task.ConfigureAwait(false);
+
         if (triggeredPresets.Count == 0)
         {
-            // Нет пресетов с триггером — нечего мониторить
+            // No presets with triggers, nothing to monitor
             return;
         }
+
+        // 2. Perform process checks on background thread
+        var matchedId = (string?)null;
+        var matchedName = (string?)null;
+        var matchedTriggerProcess = (string?)null;
+        Guid? matchedPresetId = null;
+
         foreach (var p in triggeredPresets)
         {
             var raw = p.TriggerProcess.Trim();
@@ -780,10 +797,13 @@ public partial class MainViewModel
             var procs = System.Diagnostics.Process.GetProcessesByName(exeName);
             try
             {
-                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🔍 Ищу «{exeName}» (из «{raw}») → найдено: {procs.Length}");
+                Serilog.Log.Debug("Searching for process {ExeName} (from {Raw}) -> found: {Count}", exeName, raw, procs.Length);
                 if (procs.Length > 0)
                 {
-                    matched = p;
+                    matchedId = p.Id.ToString();
+                    matchedName = p.Name;
+                    matchedTriggerProcess = p.TriggerProcess;
+                    matchedPresetId = p.Id;
                     break;
                 }
             }
@@ -794,32 +814,40 @@ public partial class MainViewModel
             }
         }
 
-        var matchedId = matched?.Id.ToString();
-
+        // 3. If there is a state change, marshal back to the UI thread
         if (matchedId != _activeTriggeredPreset)
         {
-            if (matched is not null)
+            await dispatcher.InvokeAsync(async () =>
             {
-                // Процесс появился → применяем пресет
-                _activeTriggeredPreset = matchedId;
-                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🎮 Обнаружен процесс «{matched.TriggerProcess}» → применяю пресет «{matched.Name}»");
-                _ = ApplyPreset(matched);
-            }
-            else if (_activeTriggeredPreset is not null)
-            {
-                // Процесс исчез → возвращаем первый пресет без триггера (если есть)
-                _activeTriggeredPreset = null;
-                var fallback = Presets.FirstOrDefault(p => string.IsNullOrWhiteSpace(p.TriggerProcess));
-                if (fallback is not null)
+                // Double check the matched state hasn't been raced
+                if (matchedId != _activeTriggeredPreset)
                 {
-                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён → возврат к пресету «{fallback.Name}»");
-                    _ = ApplyPreset(fallback);
+                    if (matchedPresetId is Guid targetId)
+                    {
+                        var realPreset = Presets.FirstOrDefault(p => p.Id == targetId);
+                        if (realPreset is not null)
+                        {
+                            _activeTriggeredPreset = matchedId;
+                            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🎮 Обнаружен процесс «{matchedTriggerProcess}» → применяю пресет «{matchedName}»");
+                            await ApplyPreset(realPreset);
+                        }
+                    }
+                    else if (_activeTriggeredPreset is not null)
+                    {
+                        _activeTriggeredPreset = null;
+                        var fallback = Presets.FirstOrDefault(p => string.IsNullOrWhiteSpace(p.TriggerProcess));
+                        if (fallback is not null)
+                        {
+                            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён → возврат к пресету «{fallback.Name}»");
+                            await ApplyPreset(fallback);
+                        }
+                        else
+                        {
+                            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён (пресет возврата не задан)");
+                        }
+                    }
                 }
-                else
-                {
-                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён (пресет возврата не задан)");
-                }
-            }
+            }).Task.Unwrap().ConfigureAwait(false);
         }
     }
 }
